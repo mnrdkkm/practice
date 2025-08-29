@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>テンパイ何待ちクイズ7枚版(＋スピードモード）</title>
+<style>
+  :root{ --w: clamp(44px, 10vw, 64px); --h: calc(var(--w) * 1.45); }
+  *{ box-sizing: border-box; }
+  body{ font-family: system-ui, -apple-system, "Segoe UI", sans-serif; margin:12px; text-align:center; }
+  h2{ font-size: clamp(16px, 4.5vw, 22px); margin: 0.2em 0 0.6em; }
+  .board{ display:flex; justify-content:center; flex-wrap:wrap; gap:6px; margin: 0.6em; }
+  .choices{ display:flex; justify-content:center; flex-wrap:wrap; gap:8px; margin: 0.6em; }
+
+  .tile{
+    width: var(--w); height: var(--h);
+    border: 2px solid #8a8a8a; border-radius: 6px; background:#fff;
+    box-shadow: inset 0 0 0 2px #fff, 0 1px 2px rgba(0,0,0,.06);
+    display:flex; align-items:center; justify-content:center;
+    writing-mode: vertical-rl; text-orientation: upright;
+    font-size: clamp(22px, calc(var(--w) * 0.58), 38px); font-weight: 800; color:#000;
+    line-height: 1; user-select: none;
+  }
+  .tile .man{ color:#c62828; font-size:0.95em; }
+  .choices .tile{ cursor:pointer; }
+  .choices .selected{ outline: 3px solid #1976d2; outline-offset: 2px; }
+
+  button{ padding:10px 14px; border-radius:12px; border:1px solid #777; background:#f7f7f7; font-weight:800; font-size:clamp(14px,3.4vw,16px); }
+  #streakRow button{ font-size: clamp(14px, 4vw, 18px); padding: 8px 14px; }
+  #result{ margin: .8rem 0; font-weight:800; }
+  .controls{ display:flex; gap:12px; align-items:center; justify-content:center; flex-wrap:wrap; margin:6px 0 2px; font-size:clamp(12px,3.2vw,14px); }
+
+  .ud .tile{ border-color:#000; box-shadow:none; }
+  .ud .choices .selected{ outline-width:4px; }
+  .ud button{ border-color:#000; }
+
+  #err{ color:#d32f2f; font-weight:700; font-size:12px; margin-top:6px; }
+  #streakRow{ font-size: clamp(14px, 4vw, 18px); display:flex; gap:10px; align-items:center; justify-content:center; flex-wrap:wrap; }
+  #streakRow strong{ font-size: 1.1em; }
+
+  .timer{ font-weight:800; min-width: 6ch; display:inline-block; }
+</style>
+</head>
+<body>
+  <h2><strong>テンパイ何待ちクイズ7枚版(＋スピードモード）</strong>）</h2>
+  <div id="problem" class="board" aria-label="問題の手牌（7枚）"></div>
+
+  <div id="choices" class="choices" aria-label="解答候補（1〜9萬）"></div>
+
+  <div id="streakRow">
+    <span>連続正解数：<strong><span id="streakNow">0</span></strong>回 (最高 <strong><span id="streakBest">0</span></strong>回)</span>
+    <button type="button" id="streakReset">正解数リセット</button>
+  </div>
+
+  <div style="display:flex; gap:8px; justify-content:center; flex-wrap:wrap; align-items:center;">
+    <button type="button" id="btnAnswer">解答する (Enter)</button>
+    <button type="button" id="btnReveal">答えを表示</button>
+    <button type="button" id="btnNext">次の問題 (N)</button>
+    <span id="timer" class="timer" aria-live="polite"></span>
+  </div>
+
+  <div class="controls">
+    <label>サイズ: <input id="sizeRange" type="range" min="36" max="80" step="1" value="0"> <span id="sizeLabel">自動</span></label>
+    <label><input id="udToggle" type="checkbox"> UDモード（高コントラスト）</label>
+    <label><input id="speedToggle" type="checkbox"> スピードモード（固定10秒）</label>
+  </div>
+
+  <div id="result" aria-live="polite"></div>
+  <div id="err" aria-live="polite"></div>
+
+<script>
+(() => {
+  const errEl = document.getElementById('err');
+  window.onerror = (m, s, l, c, e) => { errEl.textContent = 'エラー: ' + m; console.error(m, s, l, c, e); };
+
+  const problemEl = document.getElementById('problem');
+  const choicesEl = document.getElementById('choices');
+  const resultEl  = document.getElementById('result');
+  const btnAnswer = document.getElementById('btnAnswer');
+  const btnReveal = document.getElementById('btnReveal');
+  const btnNext   = document.getElementById('btnNext');
+  const sizeRange = document.getElementById('sizeRange');
+  const sizeLabel = document.getElementById('sizeLabel');
+  const udToggle  = document.getElementById('udToggle');
+  const speedToggle = document.getElementById('speedToggle');
+  const timerEl   = document.getElementById('timer');
+  const streakNowEl  = document.getElementById('streakNow');
+  const streakBestEl = document.getElementById('streakBest');
+  const streakResetBtn = document.getElementById('streakReset');
+
+  const NUMS = ['一','二','三','四','五','六','七','八','九'];
+
+  let problemCounts = Array(10).fill(0);
+  let waits = new Set();
+  let selected = new Set();
+
+  let speedMode = false;
+  const timeLimit = 10;
+  let timeLeft = 0;
+  let timerId = null;
+
+  let streak = 0;
+  let bestStreak = 0;
+  const LS_STREAK = 'chinitsu7_streak_now';
+  const LS_BEST   = 'chinitsu7_streak_best';
+
+  function loadStreak(){
+    try{
+      streak = parseInt(localStorage.getItem(LS_STREAK)||'0',10) || 0;
+      bestStreak = parseInt(localStorage.getItem(LS_BEST)||'0',10) || 0;
+    }catch(_){ }
+  }
+  function saveStreak(){
+    try{
+      localStorage.setItem(LS_STREAK, String(streak));
+      localStorage.setItem(LS_BEST,   String(bestStreak));
+    }catch(_){ }
+  }
+  function renderStreak(){
+    streakNowEl.textContent  = String(streak);
+    streakBestEl.textContent = String(bestStreak);
+  }
+
+  if(streakResetBtn){
+    streakResetBtn.addEventListener('click', ()=>{
+      streak = 0; bestStreak = 0;
+      saveStreak(); renderStreak();
+      resultEl.textContent = '連続正解数をリセットしました';
+    });
+  }
+
+  function tileNode(n){
+    const d = document.createElement('div'); d.className = 'tile';
+    d.innerHTML = `${NUMS[n-1]}<span class="man">萬</span>`;
+    return d;
+  }
+
+  function renderHand(){
+    problemEl.innerHTML='';
+    for(let i=1;i<=9;i++) for(let k=0;k<problemCounts[i];k++) problemEl.appendChild(tileNode(i));
+  }
+  function renderChoices(){
+    choicesEl.innerHTML='';
+    for(let i=1;i<=9;i++){
+      const btn = document.createElement('button'); btn.type='button'; btn.className='tile'; btn.dataset.num=i;
+      btn.innerHTML = `${NUMS[i-1]}<span class="man">萬</span>`;
+      btn.addEventListener('click', ()=>{
+        if(selected.has(i)){ selected.delete(i); btn.classList.remove('selected'); }
+        else{ selected.add(i); btn.classList.add('selected'); }
+      });
+      choicesEl.appendChild(btn);
+    }
+  }
+
+  const sum = a=>a.reduce((x,y)=>x+y,0);
+  function clone(a){ return a.slice(); }
+  function canMentsu(cnt){
+    let i=1; while(i<=9 && cnt[i]===0) i++; if(i>9) return true;
+    if(cnt[i]>=3){ cnt[i]-=3; if(canMentsu(cnt)){ cnt[i]+=3; return true; } cnt[i]+=3; }
+    if(i<=7 && cnt[i+1]>0 && cnt[i+2]>0){
+      cnt[i]--; cnt[i+1]--; cnt[i+2]--;
+      if(canMentsu(cnt)){ cnt[i]++; cnt[i+1]++; cnt[i+2]++; return true; }
+      cnt[i]++; cnt[i+1]++; cnt[i+2]++;
+    }
+    return false;
+  }
+
+  function isAgari8Std(cnt){
+    if(sum(cnt)!==8) return false;
+    for(let j=1;j<=9;j++){
+      if(cnt[j]>=2){
+        cnt[j]-=2;
+        const ok = canMentsu(cnt);
+        cnt[j]+=2;
+        if(ok) return true;
+      }
+    }
+    return false;
+  }
+
+  function agari8StdWithoutBanned(c7, t){
+    const c8 = clone(c7); c8[t]++;
+    if(sum(c8)!==8) return false;
+    if(!isAgari8Std(c8.slice())) return false;
+    return true;
+  }
+
+  function waitsFor7(c7){
+    const w=new Set();
+    if(sum(c7)!==7) return w;
+    for(let t=1;t<=9;t++){
+      if(c7[t]===4) continue;
+      if(agari8StdWithoutBanned(c7, t)) w.add(t);
+    }
+    return w;
+  }
+
+  function randCounts8(){
+    const c=Array(10).fill(0);
+    while(sum(c)<8){
+      const i=1+Math.floor(Math.random()*9);
+      if(c[i]<4) c[i]++;
+    }
+    return c;
+  }
+  function randAgari8(){
+    for(let t=0;t<40000;t++){
+      const c=randCounts8();
+      if(isAgari8Std(c.slice())) return c;
+    }
+    return null;
+  }
+  function makeProblem(){
+    const agari = randAgari8();
+    if(!agari){
+      const fb = Array(10).fill(0);
+      fb[2]=2; fb[3]=1; fb[4]=2; fb[5]=1; fb[6]=1;
+      problemCounts=fb; waits=waitsFor7(problemCounts.slice()); return;
+    }
+    let idx; do{ idx=1+Math.floor(Math.random()*9); } while(agari[idx]===0);
+    agari[idx]--;
+    problemCounts=agari;
+    waits=waitsFor7(problemCounts.slice());
+    if(waits.size===0 || waits.size===1) return makeProblem(); // 1枚待ちをスキップ
+  }
+
+  function judge(){
+    if(timerId){ clearInterval(timerId); timerId=null; }
+    const pick=[...selected].sort((a,b)=>a-b).join(',');
+    const ans=[...waits].sort((a,b)=>a-b).join(',');
+    if(pick===ans){
+      resultEl.textContent='🟢 完全正解！';
+      streak++;
+      if(streak>bestStreak) bestStreak=streak;
+      saveStreak(); renderStreak();
+      [...choicesEl.children].forEach(el=>{
+        const n=+el.dataset.num; if(waits.has(n)) el.classList.add('selected');
+        el.disabled=true;
+      });
+      if(speedMode){ setTimeout(next, 800); }
+    } else {
+      const chosen=[...selected]; const w=[...waits];
+      const wrong = chosen.filter(n=>!waits.has(n));
+      const missed = w.filter(n=>!selected.has(n));
+      resultEl.textContent = `❌ 不正解 誤選択:${wrong.join(',')||'なし'} / 見逃し:${missed.join(',')||'なし'}`;
+      streak = 0; saveStreak(); renderStreak();
+      [...choicesEl.children].forEach(el=>{
+        const n=+el.dataset.num; if(waits.has(n)) el.classList.add('selected'); else if(selected.has(n)) el.style.outline='3px solid #d32f2f';
+        el.disabled=true;
+      });
+      if(speedMode){ setTimeout(next, 1500); }
+    }
+  }
+
+  function startTimer(){
+    if(!speedMode){ timerEl.textContent=''; return; }
+    if(timerId){ clearInterval(timerId); timerId=null; }
+    timeLeft = timeLimit;
+    timerEl.textContent = `残り ${timeLeft}秒`;
+    timerId = setInterval(()=>{
+      timeLeft -= 1;
+      if(timeLeft<=0){
+        clearInterval(timerId); timerId=null;
+        if(selected.size===0){ resultEl.textContent = '⌛ タイムアップ！'; }
+        judge();
+      } else {
+        timerEl.textContent = `残り ${timeLeft}秒`;
+      }
+    }, 1000);
+  }
+
+  function next(){
+    selected.clear(); resultEl.textContent=''; errEl.textContent='';
+    makeProblem(); renderHand(); renderChoices();
+    if(speedMode){ btnReveal.disabled = true; startTimer(); } else { btnReveal.disabled = false; timerEl.textContent=''; }
+  }
+
+  function applySize(pxOrAuto){
+    if(pxOrAuto==='auto'){ document.documentElement.style.setProperty('--w','clamp(44px, 10vw, 64px)'); sizeLabel.textContent='自動'; }
+    else{ document.documentElement.style.setProperty('--w', pxOrAuto+'px'); sizeLabel.textContent=pxOrAuto+'px'; }
+    document.documentElement.style.setProperty('--h','calc(var(--w) * 1.45)');
+  }
+  sizeRange.addEventListener('input', ()=>{ const v=sizeRange.valueAsNumber||0; if(v<=0) applySize('auto'); else applySize(v); });
+  udToggle.addEventListener('change', ()=>{ document.body.classList.toggle('ud', udToggle.checked); });
+  speedToggle.addEventListener('change', ()=>{ speedMode = speedToggle.checked; next(); });
+
+  btnAnswer.addEventListener('click', judge);
+  btnReveal.addEventListener('click', ()=>{ resultEl.textContent = '正解: ' + [...waits].sort((a,b)=>a-b).map(n=>NUMS[n-1]+'萬').join(' '); });
+  btnNext.addEventListener('click', next);
+  window.addEventListener('keydown', (e)=>{ if(e.key==='Enter') judge(); if(e.key.toLowerCase()==='n') next(); });
+
+  loadStreak();
+  renderStreak();
+  applySize('auto');
+  next();
+})();
+</script>
+</body>
+</html>
