@@ -19,9 +19,9 @@
   /* 牌 */
   .handRow{ display:flex; justify-content:center; align-items:center; gap:18px; margin:6px 0 8px; }
   .board{ display:flex; justify-content:center; flex-wrap:wrap; gap:6px; background:#0b6623; padding:10px; border-radius:10px; min-height: calc(var(--h) + 20px); }
-  .winWrap{ position:relative; display:flex; align-items:center; }
+  .winWrap{ position:relative; display:flex; align-items:center; writing-mode: horizontal-tb;  text-orientation: mixed;}
   .winTile{ position:relative; }
-  .winLabel{ position:absolute; top:-10px; left:50%; transform:translateX(-50%); font-weight:800; font-size:12px; background:#fff; border:1px solid #bbb; border-radius:999px; padding:2px 6px; }
+  .winLabel{ position:absolute; top:-35px; left:50%; transform:translateX(-50%); font-weight:800; font-size:14px; background:#fff; border:1px solid #bbb; border-radius:999px; padding:6px 23px; white-space: nowrap; }
   .spacer{ width:14px; height:2px; background:linear-gradient(90deg, transparent 0 30%, #0b6623 30% 70%, transparent 70% 100%); border-radius:2px; }
 
   .tile{ width:var(--w); height:var(--h); border:2px solid #8a8a8a; border-radius:6px; background:#fff;
