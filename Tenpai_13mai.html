@@ -12,7 +12,7 @@
   .board{ display:flex; justify-content:center; flex-wrap:wrap; gap:6px; margin: 0.6em; }
   .choices{ display:flex; justify-content:center; flex-wrap:wrap; gap:8px; margin: 0.6em; }
 
-  /* 牌：数字は黒、萬は赤。縦書き。タップ領域は>=44px確保 */
+  /* 牌 */
   .tile{
     width: var(--w); height: var(--h);
     border: 2px solid #8a8a8a; border-radius: 6px; background:#fff;
@@ -31,31 +31,31 @@
   #result{ margin: .8rem 0; font-weight:800; }
   .controls{ display:flex; gap:12px; align-items:center; justify-content:center; flex-wrap:wrap; margin:6px 0 2px; font-size:clamp(12px,3.2vw,14px); }
 
-  /* UD（高コントラスト）モード */
   .ud .tile{ border-color:#000; box-shadow:none; }
   .ud .choices .selected{ outline-width:4px; }
   .ud button{ border-color:#000; }
 
   #err{ color:#d32f2f; font-weight:700; font-size:12px; margin-top:6px; }
-  #streakRow{ font-size: clamp(14px, 4vw, 18px); }
+  #streakRow{ font-size: clamp(14px, 4vw, 18px); display:flex; gap:10px; align-items:center; justify-content:center; flex-wrap:wrap; }
   #streakRow strong{ font-size: 1.1em; }
 </style>
 </head>
 <body>
-  <h2>テンパイ何待ちクイズ13枚版</h2>
+  <h2><strong>テンパイ何待ちクイズ13枚版</strong>）</h2>
   <div id="problem" class="board" aria-label="問題の手牌"></div>
 
   <div id="choices" class="choices" aria-label="解答候補"></div>
 
-  <!-- ▼ 連続正解 表示行（追加） -->
-  <div id="streakRow" style="margin-top:4px; font-size:clamp(14px, 4vw, 20px); display:flex; gap:10px; align-items:center; justify-content:center; flex-wrap:wrap; display:flex; gap:10px; align-items:center; justify-content:center; flex-wrap:wrap;">
+  <!-- 連続正解 表示行 -->
+  <div id="streakRow">
     <span>連続正解数：<strong><span id="streakNow">0</span></strong>回 (最高 <strong><span id="streakBest">0</span></strong>回)</span>
     <button type="button" id="streakReset">正解数リセット</button>
   </div>
-  <!-- ▲ 連続正解 表示行 -->
 
-  <div style="display:flex; gap:8px; justify-content:center; flex-wrap:wrap;">
+  <!-- 操作ボタン列（ボタン間の空白を広めに） -->
+  <div class="btnRow" style="display:flex; gap:14px; justify-content:center; flex-wrap:wrap; align-items:center;">
     <button type="button" id="btnAnswer">解答する (Enter)</button>
+    <button type="button" id="btnHint">ヒント（待ち枚数）</button>
     <button type="button" id="btnReveal">答えを表示</button>
     <button type="button" id="btnNext">次の問題 (N)</button>
   </div>
@@ -79,12 +79,13 @@
   const choicesEl = document.getElementById('choices');
   const resultEl  = document.getElementById('result');
   const btnAnswer = document.getElementById('btnAnswer');
+  const btnHint   = document.getElementById('btnHint');
   const btnReveal = document.getElementById('btnReveal');
   const btnNext   = document.getElementById('btnNext');
   const sizeRange = document.getElementById('sizeRange');
   const sizeLabel = document.getElementById('sizeLabel');
   const udToggle  = document.getElementById('udToggle');
-  // ▼ 連続正解UI
+  // 連続正解UI
   const streakNowEl  = document.getElementById('streakNow');
   const streakBestEl = document.getElementById('streakBest');
   const streakResetBtn = document.getElementById('streakReset');
@@ -99,8 +100,8 @@
   // 連続正解カウンタ
   let streak = 0;
   let bestStreak = 0;
-  const LS_STREAK = 'chinitsu_streak_now';
-  const LS_BEST   = 'chinitsu_streak_best';
+  const LS_STREAK = 'chinitsu13_streak_now';
+  const LS_BEST   = 'chinitsu13_streak_best';
 
   function loadStreak(){
     try{
@@ -181,6 +182,13 @@
     agari[idx]--; problemCounts=agari; waits=waitsFor(problemCounts.slice()); if(waits.size===0) return makeProblem();
   }
 
+  // ===== ヒント：待ち牌の合計枚数（山に残っている最大枚数） =====
+  function totalWaitTiles(){
+    let total = 0, kinds = 0; // 合計枚数と種類数
+    waits.forEach(t => { const remain = 4 - problemCounts[t]; if(remain>0){ total += remain; kinds++; } });
+    return { total, kinds };
+  }
+
   // ===== 判定 =====
   function judge(){
     const pick=[...selected].sort((a,b)=>a-b).join(',');
@@ -194,7 +202,7 @@
       const wrong = chosen.filter(n=>!waits.has(n));
       const missed = w.filter(n=>!selected.has(n));
       resultEl.textContent = `❌ 不正解 誤選択:${wrong.join(',')||'なし'} / 見逃し:${missed.join(',')||'なし'}`;
-      streak = 0; // 連続はリセット
+      streak = 0;
     }
     saveStreak();
     renderStreak();
@@ -219,6 +227,10 @@
 
   // ===== ボタン / キー =====
   btnAnswer.addEventListener('click', judge);
+  btnHint.addEventListener('click', ()=>{
+    const { total, kinds } = totalWaitTiles();
+    resultEl.textContent = `💡 ヒント: 待ちは合計 ${total} 枚（${kinds} 種）`;
+  });
   btnReveal.addEventListener('click', ()=>{ resultEl.textContent = '正解: ' + [...waits].sort((a,b)=>a-b).map(n=>NUMS[n-1]+'萬').join(' '); });
   btnNext.addEventListener('click', next);
   window.addEventListener('keydown', (e)=>{ if(e.key==='Enter') judge(); if(e.key.toLowerCase()==='n') next(); });
