@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>和了役を計算しようー</title>
+<style>
+  :root{ --w: clamp(44px, 8.2vw, 64px); --h: calc(var(--w) * 1.45); }
+  *{ box-sizing: border-box; }
+  body{ font-family: system-ui, -apple-system, "Segoe UI", sans-serif; margin:12px; text-align:center; }
+  h2{ font-size: clamp(16px, 4.5vw, 22px); margin: 0.2em 0 0.3em; }
+
+  /* メタ（大きめ＆グループ表示） */
+  .meta{ font-size: clamp(18px, 4.5vw, 24px); margin-bottom:.6rem; display:flex; gap:12px; justify-content:center; flex-wrap:wrap; font-weight:900; }
+  .badge{ padding:6px 12px; border-radius:999px; background:#eef3ff; border:2px solid #c7d6ff; font-weight:900; }
+  .badge.group{ display:inline-flex; align-items:center; gap:10px; }
+  .badge.group .sep{ opacity:.55; }
+
+  /* 牌 */
+  .handRow{ display:flex; justify-content:center; align-items:center; gap:18px; margin:6px 0 8px; }
+  .board{ display:flex; justify-content:center; flex-wrap:wrap; gap:6px; background:#0b6623; padding:10px; border-radius:10px; min-height: calc(var(--h) + 20px); }
+  .winWrap{ position:relative; display:flex; align-items:center; }
+  .winTile{ position:relative; }
+  .winLabel{ position:absolute; top:-10px; left:50%; transform:translateX(-50%); font-weight:800; font-size:12px; background:#fff; border:1px solid #bbb; border-radius:999px; padding:2px 6px; }
+  .spacer{ width:14px; height:2px; background:linear-gradient(90deg, transparent 0 30%, #0b6623 30% 70%, transparent 70% 100%); border-radius:2px; }
+
+  .tile{ width:var(--w); height:var(--h); border:2px solid #8a8a8a; border-radius:6px; background:#fff;
+         box-shadow: inset 0 0 0 2px #fff, 0 1px 2px rgba(0,0,0,.06); display:flex; align-items:center; justify-content:center;
+         writing-mode: vertical-rl; text-orientation: upright; font-size:clamp(20px, calc(var(--w)*0.54), 36px); font-weight:800; color:#000; line-height:1; user-select:none; position:relative; }
+  .tile.m{ background:#fdecea; } /* 萬：薄赤 */
+  .tile.p{ background:#eaf3fd; } /* 筒：薄青 */
+  .tile.s{ background:#eafded; } /* 索：薄緑 */
+  .m{ color:#c62828; } .p{ color:#1565c0; } .s{ color:#2e7d32; } .honor{ color:#000; }
+  .tile .num{ color:#000; }
+  .tile.mini{ width:calc(var(--w)*0.6); height:calc(var(--h)*0.6); font-size:clamp(12px, calc(var(--w)*0.32), 18px); border-width:2px; } /* ミニ牌（ドラ表示用） */
+
+  /* コントロール */
+  .controlRow{ display:flex; gap:12px; justify-content:center; align-items:center; flex-wrap:wrap; margin:.4rem 0 .6rem; }
+  .controlRow button{ padding:10px 14px; border-radius:12px; border:1px solid #777; background:#f7f7f7; font-weight:800; font-size:clamp(14px,3.4vw,16px); }
+  .controlRow label{ display:inline-flex; align-items:center; gap:6px; font-weight:700; }
+  .controlRow select{ padding:8px 10px; border-radius:10px; border:1px solid #777; font-weight:700; }
+
+  /* 結果エリア：常設（高さ確保） */
+  #resultPanel{
+    min-height: 5.6em;
+    display:flex; flex-direction:column; gap:.15rem;
+    align-items:center; justify-content:flex-start;
+    margin:.4rem 0 .6rem;
+  }
+  /* 状態クラス（OK/惜しい/不正解） */
+  #result.ok   { color:#0a7d00; }     /* 緑 */
+  #result.near { color:#b08900; }     /* 琥珀 */
+  #result.bad  { color:#b00020; }     /* 赤 */
+  #result .mark{ color:#f6c000; font-weight:900; margin-right:.15em; } /* ▲の黄色 */
+
+  #yakuLine{ font-weight:700; }
+  #fuLine{ color:#444; }
+  #err{ color:#d32f2f; font-weight:700; font-size:12px; margin-top:6px; }
+
+  /* 役メモ */
+  .memo{ margin:12px auto 8px; max-width:980px; text-align:left; }
+  .memo h3{ font-size:14px; margin:.4rem 0; }
+  .memo .headNote{ font-size:12px; color:#555; font-weight:700; margin-left:.4em; }
+  .yakuSection{
+    display:grid;
+    grid-template-columns: repeat(5, minmax(0,1fr));
+    gap:8px 10px;
+    align-items:start;
+    margin:8px 0 16px;
+  }
+  .yakuSection h4{ grid-column:1 / -1; font-weight:800; margin:.2rem 0; }
+  .yakuBtn{
+    display:inline-block;
+    padding:6px 10px;
+    border-radius:999px;
+    background:#f6f7fa;
+    border:1px solid #d8deef;
+    font-weight:700;
+    font-size:13px;
+    white-space:nowrap;
+    cursor:pointer;
+  }
+  .yakuBtn.selected{ background:#fff9db; border-color:#e6c85c; }
+</style>
+</head>
+<body>
+  <h2>和了役を計算しようー</h2>
+  <div id="meta" class="meta"></div>
+
+  <div class="handRow">
+    <div id="hand13" class="board" aria-label="手牌（13枚）"></div>
+    <div class="spacer" aria-hidden="true"></div>
+    <div class="winWrap">
+      <div id="winTile" class="winTile"></div>
+      <div id="winLabel" class="winLabel">ツモ</div>
+    </div>
+  </div>
+
+  <!-- コントロール -->
+  <div class="controlRow">
+    <button type="button" id="btnReveal">答えを表示</button>
+    <label>何符：<select id="fuSel"><option>--</option><option>20</option><option>25</option><option>30</option><option>40</option><option>50</option><option>60</option><option>70</option></select></label>
+    <label>何翻：<select id="hanSel"><option>--</option></select></label>
+    <button type="button" id="btnJudge">解答する (Enter)</button>
+    <button type="button" id="btnNext">次の問題 (N)</button>
+  </div>
+
+  <!-- 結果表示領域（常設） -->
+  <div id="resultPanel">
+    <div id="result" aria-live="polite"></div>
+    <div id="yakuLine" aria-live="polite"></div>
+    <div id="fuLine" aria-live="polite"></div>
+    <div id="err" aria-live="polite"></div>
+  </div>
+
+  <!-- 役メモ -->
+  <div class="memo" id="yakuMemo">
+    <h3>役一覧 <span class="headNote">（クリックでメモに使えます）</span></h3>
+
+    <div class="yakuSection">
+      <h4>一飜</h4>
+      <span class="yakuBtn">表ドラ</span><span class="yakuBtn">立直</span><span class="yakuBtn">門前清自摸和</span>
+      <span class="yakuBtn">断么九</span><span class="yakuBtn">平和</span><span class="yakuBtn">一盃口</span>
+      <span class="yakuBtn">役牌</span><span class="yakuBtn">場風牌</span><span class="yakuBtn">自風牌</span>
+    </div>
+    <div class="yakuSection">
+      <h4>二飜</h4>
+      <span class="yakuBtn">三色同順</span><span class="yakuBtn">三色同刻</span><span class="yakuBtn">一気通貫</span>
+      <span class="yakuBtn">混全帯么九</span><span class="yakuBtn">七対子</span><span class="yakuBtn">対々和</span>
+      <span class="yakuBtn">三暗刻</span><span class="yakuBtn">混老頭</span><span class="yakuBtn">小三元</span>
+    </div>
+    <div class="yakuSection">
+      <h4>三飜</h4>
+      <span class="yakuBtn">混一色</span><span class="yakuBtn">純全帯么九</span><span class="yakuBtn">二盃口</span>
+    </div>
+    <div class="yakuSection">
+      <h4>六飜</h4>
+      <span class="yakuBtn">清一色</span>
+    </div>
+    <div class="yakuSection">
+      <h4>役満</h4>
+      <span class="yakuBtn">四暗刻</span><span class="yakuBtn">清老頭</span><span class="yakuBtn">緑一色</span>
+      <span class="yakuBtn">大三元</span><span class="yakuBtn">字一色</span><span class="yakuBtn">小四喜</span>
+      <span class="yakuBtn">大四喜</span><span class="yakuBtn">九蓮宝燈</span>
+    </div>
+  </div>
+
+<script>
+(() => {
+  const errEl = document.getElementById('err');
+  window.onerror = (m, s, l, c, e) => { errEl.textContent = 'エラー: ' + m; console.error(m, s, l, c, e); };
+
+  const metaEl    = document.getElementById('meta');
+  const hand13El  = document.getElementById('hand13');
+  const winTileEl = document.getElementById('winTile');
+  const winLabel  = document.getElementById('winLabel');
+  const fuSel     = document.getElementById('fuSel');
+  const hanSel    = document.getElementById('hanSel');
+  const btnJudge  = document.getElementById('btnJudge');
+  const btnReveal = document.getElementById('btnReveal');
+  const btnNext   = document.getElementById('btnNext');
+
+  let dora = {kind:'m', num:5};
+
+  if(hanSel.children.length<=1){
+    for(let i=1;i<=13;i++){ const o=document.createElement('option'); o.textContent=String(i); hanSel.appendChild(o); }
+  }
+
+  const NUMS = ['一','二','三','四','五','六','七','八','九'];
+  const SUIT_LABEL = { m:'萬', p:'筒', s:'索' };
+  const HONOR_LABEL = ['東','南','西','北','白','發','中'];
+  const MARU_NUMS = ['①','②','③','④','⑤','⑥','⑦','⑧','⑨'];
+
+  // 状態
+  let counts = { m:Array(10).fill(0), p:Array(10).fill(0), s:Array(10).fill(0), z:Array(8).fill(0) };
+  let draw   = { kind:'m', num:1 };
+  let winType = 'tsumo';
+  let isMenzen = true;
+  let bakaze = 1, jikaze = 1;
+  let isRiichi = false;
+
+  let fuAns = 30, hanAns = 1;
+  let lastMelds = [], lastHead = null, base13Counts = null;
+  let lastYakuList = [], lastFuBreak = [];
+
+  const randInt = (a,b)=> a+Math.floor(Math.random()*(b-a+1));
+
+  function tileNode(kind,n){
+    const d=document.createElement('div');
+    d.className='tile ' + kind;
+    if(kind==='z'){ d.textContent = HONOR_LABEL[n-1]; d.classList.add('honor'); }
+    else{
+      const numStr = kind==='m' ? NUMS[n-1] : kind==='p' ? MARU_NUMS[n-1] : String(n);
+      d.innerHTML = `<span class="num">${numStr}</span><span class="${kind}">${SUIT_LABEL[kind]}</span>`;
+    }
+    return d;
+  }
+  function labelShort(k,n){ if(k==='z') return HONOR_LABEL[n-1]; const suit=k==='m'?'萬':k==='p'?'筒':'索'; const num=k==='m'?NUMS[n-1]:(k==='p'?MARU_NUMS[n-1]:String(n)); return num+suit; }
+  function renderHand13(){
+    hand13El.innerHTML='';
+    ['m','p','s'].forEach(k=>{ for(let i=1;i<=9;i++) for(let t=0;t<counts[k][i];t++) hand13El.appendChild(tileNode(k,i)); });
+    for(let i=1;i<=7;i++) for(let t=0;t<counts.z[i];t++) hand13El.appendChild(tileNode('z',i));
+  }
+  function renderWin(){ winTileEl.innerHTML=''; winTileEl.appendChild(tileNode(draw.kind, draw.num)); winLabel.textContent = (winType==='tsumo'?'ツモ':'ロン'); }
+
+  /* メタ：場風+自風+ドラ / 立直+和了 を1つずつにまとめる */
+  function updateMeta(){
+    metaEl.innerHTML='';
+    const windBox = document.createElement('div');
+    windBox.className = 'badge group';
+    const s1 = document.createElement('span'); s1.textContent = `場風:${bakaze===1?'東':'南'}`;
+    const s2 = document.createElement('span'); s2.textContent = `自風:${jikaze===1?'東':'南'}`;
+    const sep1 = document.createElement('span'); sep1.className='sep'; sep1.textContent='|';
+    const sep2 = document.createElement('span'); sep2.className='sep'; sep2.textContent='|';
+    const dLabel = document.createElement('span'); dLabel.textContent='ドラ';
+    const dTile  = tileNode(dora.kind, dora.num); dTile.classList.add('mini'); dTile.setAttribute('aria-label','ドラ表示');
+    windBox.append(s1, sep1, s2, sep2, dLabel, dTile);
+    metaEl.appendChild(windBox);
+
+    const statusBox = document.createElement('div');
+    statusBox.className = 'badge group';
+    const s3 = document.createElement('span'); s3.textContent = `立直:${isRiichi?'有':'無'}`;
+    const sep3 = document.createElement('span'); sep3.className='sep'; sep3.textContent='|';
+    const s4 = document.createElement('span'); s4.textContent = `和了:${winType==='tsumo'?'ツモ':'ロン'}`;
+    statusBox.append(s3, sep3, s4);
+    metaEl.appendChild(statusBox);
+  }
+
+  /* 一盃口/二盃口 厳密判定ユーティリティ */
+  function cloneCounts(c){ return { m:c.m.slice(), p:c.p.slice(), s:c.s.slice(), z:c.z.slice() }; }
+  function maxIipeikouPairs(fullCounts){
+    let best = 0;
+    const pairChoices = [];
+    for(const k of ['m','p','s']) for(let n=1;n<=9;n++) if(fullCounts[k][n]>=2) pairChoices.push({k,n});
+    for(let n=1;n<=7;n++) if(fullCounts.z[n]>=2) pairChoices.push({k:'z',n});
+
+    const pickFirstTile=(c)=>{
+      for(const k of ['m','p','s','z']){
+        const maxN=(k==='z'?7:9);
+        for(let n=1;n<=maxN;n++) if(c[k][n]>0) return {k,n};
+      }
+      return null;
+    };
+    const dfs=(c, melds)=>{
+      if(melds.length===4){
+        const cnt=new Map();
+        for(const m of melds){ if(m.type==='shuntsu'){ const key=`${m.k}:${m.n}`; cnt.set(key,(cnt.get(key)||0)+1); } }
+        let pairs=0; for(const v of cnt.values()) pairs+=Math.floor(v/2);
+        if(pairs>best) best=pairs; return;
+      }
+      const t=pickFirstTile(c); if(!t) return;
+      if(c[t.k][t.n]>=3){ c[t.k][t.n]-=3; melds.push({type:'koutsu',k:t.k,n:t.n}); dfs(c, melds); melds.pop(); c[t.k][t.n]+=3; }
+      if(t.k!=='z' && t.n<=7 && c[t.k][t.n+1]>0 && c[t.k][t.n+2]>0){
+        c[t.k][t.n]--; c[t.k][t.n+1]--; c[t.k][t.n+2]--;
+        melds.push({type:'shuntsu',k:t.k,n:t.n}); dfs(c, melds); melds.pop();
+        c[t.k][t.n]++; c[t.k][t.n+1]++; c[t.k][t.n+2]++;
+      }
+    };
+    for(const head of pairChoices){
+      const c=cloneCounts(fullCounts);
+      c[head.k][head.n]-=2;
+      dfs(c, []);
+      if(best===2) break;
+    }
+    return best;
+  }
+
+  /* 面子プール・判定補助 */
+  const SHUNTSU_POOL=(()=>{ const a=[]; for(const k of ['m','p','s']) for(const n of [1,2,3,4,5,6,7]) a.push({type:'shuntsu',k,n}); return a; })();
+  const KOUTSU_POOL =(()=>{ const a=[]; for(const k of ['m','p','s']) for(let n=1;n<=9;n++) a.push({type:'koutsu',k,n}); for(const n of [1,2,3,4,5,6,7]) a.push({type:'koutsu',k:'z',n}); return a; })();
+  const TOITSU_POOL =(()=>{ const a=[]; for(const k of ['m','p','s']) for(let n=1;n<=9;n++) a.push({k,n}); for(const n of [1,2,3,4,5,6,7]) a.push({k:'z',n}); return a; })();
+  function tilesFromMeld(m){ return m.type==='shuntsu'?[{k:m.k,n:m.n},{k:m.k,n:m.n+1},{k:m.k,n:m.n+2}]:[{k:m.k,n:m.n},{k:m.k,n:m.n},{k:m.k,n:m.n}]; }
+  function tilesFromPair(p){ return [{k:p.k,n:p.n},{k:p.k,n:p.n}]; }
+  function countsFromTiles(tiles){ const c={m:Array(10).fill(0),p:Array(10).fill(0),s:Array(10).fill(0),z:Array(8).fill(0)}; for(const t of tiles){ if(t.k==='z') c.z[t.n]++; else c[t.k][t.n]++; } return c; }
+  function canMentsu(arr){ let i=1; while(i<=9 && arr[i]===0) i++; if(i>9) return true; if(arr[i]>=3){ arr[i]-=3; if(canMentsu(arr)){ arr[i]+=3; return true; } arr[i]+=3; } if(i<=7 && arr[i+1]>0 && arr[i+2]>0){ arr[i]--;arr[i+1]--;arr[i+2]--; if(canMentsu(arr)){ arr[i]++;arr[i+1]++;arr[i+2]++; return true; } arr[i]++;arr[i+1]++;arr[i+2]++; } return false; }
+  function isAgariStd(full){
+    for(const k of ['m','p','s']) for(let j=1;j<=9;j++) if(full[k][j]>=2){ full[k][j]-=2; const ok=canMentsu(full.m.slice())&&canMentsu(full.p.slice())&&canMentsu(full.s.slice())&&[1,2,3,4,5,6,7].every(z=>full.z[z]%3===0); full[k][j]+=2; if(ok) return true; }
+    for(let j=1;j<=7;j++) if(full.z[j]>=2){ full.z[j]-=2; const ok=canMentsu(full.m.slice())&&canMentsu(full.p.slice())&&canMentsu(full.s.slice())&&[1,2,3,4,5,6,7].every(z=>full.z[z]%3===0); full.z[j]+=2; if(ok) return true; }
+    return false;
+  }
+  function classifyWait(base13, draw){
+    if(draw.kind==='z') return (base13.z[draw.num]>=2)? 'shabo' : 'tanki';
+    const c=base13[draw.kind], n=draw.num;
+    if(n>=2 && n<=8 && c[n-1]>0 && c[n+1]>0) return 'kanchan';
+    if((n===3 && c[1]>0 && c[2]>0) || (n===7 && c[8]>0 && c[9]>0)) return 'penchan';
+    if(c[n]>=2) return 'shabo';
+    if((n<=7 && c[n+1]>0 && c[n+2]>0) || (n>=3 && c[n-2]>0 && c[n-1]>0)) return 'ryanmen';
+    if(c[n]>0) return 'tanki';
+    return 'other';
+  }
+
+  /* 出題 */
+  function genProblem(){
+    bakaze = randInt(1,2); jikaze = randInt(1,2); isMenzen = true; winType = Math.random()<0.5?'tsumo':'ron'; isRiichi = isMenzen && Math.random()<0.5;
+    dora = (Math.random()<0.2) ? {kind:'z', num: randInt(1,7)} : {kind: ['m','p','s'][randInt(0,2)], num: randInt(1,9)};
+
+    let made=false;
+    for(let tries=0; tries<8000 && !made; tries++){
+      let melds=[], useCount=new Map();
+      const countMap={m:Array(10).fill(0),p:Array(10).fill(0),s:Array(10).fill(0),z:Array(8).fill(0)};
+      const canAdd=tiles=>tiles.every(t=>{ const cur=(t.k==='z'?countMap.z[t.n]:countMap[t.k][t.n]); const add=tiles.filter(x=>x.k===t.k && x.n===t.n).length; return cur+add<=4; });
+      const add=tiles=>tiles.forEach(t=>{ if(t.k==='z') countMap.z[t.n]++; else countMap[t.k][t.n]++; });
+
+      while(melds.length<4){
+        const pickSeq=Math.random()<0.55; const pool=pickSeq?SHUNTSU_POOL:KOUTSU_POOL; const cand=pool[randInt(0,pool.length-1)];
+        const key=cand.type+':'+cand.k+':'+cand.n; const cnt=useCount.get(key)||0; if(cnt>=3) continue;
+        const t=tilesFromMeld(cand); if(!canAdd(t)) continue; add(t); melds.push(cand); useCount.set(key,cnt+1);
+      }
+      let head=null;
+      for(let r=0;r<200;r++){ const h=TOITSU_POOL[randInt(0,TOITSU_POOL.length-1)]; const t=tilesFromPair(h); if(canAdd(t)){ add(t); head=h; break; } }
+      if(!head) continue;
+
+      let tiles=[]; for(const m of melds) tiles=tiles.concat(tilesFromMeld(m)); tiles=tiles.concat(tilesFromPair(head));
+      const idx=Math.floor(Math.random()*tiles.length); const win=tiles[idx]; const rest=tiles.slice(0,idx).concat(tiles.slice(idx+1));
+      const c=countsFromTiles(rest); const full=countsFromTiles(rest.concat([win])); if(!isAgariStd(full)) continue;
+
+      counts=c; draw={kind:win.k, num:win.n}; lastMelds=melds.slice(); lastHead=head; base13Counts=c; made=true;
+    }
+
+    if(!made){
+      counts={m:Array(10).fill(0),p:Array(10).fill(0),s:Array(10).fill(0),z:Array(8).fill(0)};
+      counts.m[1]=counts.m[2]=counts.m[3]=1; counts.s[3]=counts.s[4]=counts.s[5]=1; counts.p[7]=3; counts.z[7]=2;
+      draw={kind:'p',num:7};
+      lastMelds=[{type:'shuntsu',k:'m',n:1},{type:'shuntsu',k:'s',n:3},{type:'koutsu',k:'p',n:7},{type:'koutsu',k:'z',n:7}];
+      lastHead={k:'z',n:7}; base13Counts=counts;
+    }
+  }
+
+  /* 役・符計算 */
+  function computeHanFu(){
+    if(!base13Counts){
+      base13Counts = JSON.parse(JSON.stringify(counts));
+      if(!lastMelds.length){ lastMelds=[{type:'shuntsu',k:'m',n:1},{type:'shuntsu',k:'s',n:3},{type:'koutsu',k:'p',n:7},{type:'koutsu',k:'z',n:7}]; }
+      if(!lastHead){ lastHead={k:'z',n:7}; }
+    }
+    lastYakuList = []; lastFuBreak = [];
+    const waitType = classifyWait(base13Counts, draw);
+
+    // 役満（四暗刻のみ簡易）
+    const full = JSON.parse(JSON.stringify(base13Counts));
+    if(draw.kind==='z') full.z[draw.num]++; else full[draw.kind][draw.num]++;
+    const ankoCountAll = lastMelds.filter(m => m.type==='koutsu').length;
+    if(isMenzen && ankoCountAll===4 && (winType==='tsumo' || (winType==='ron' && waitType==='tanki'))){
+      let fu=20, fb=[];
+      for(const m of lastMelds){ if(m.type==='koutsu'){ const add=(m.k==='z'||m.n===1||m.n===9)?8:4; fu+=add; fb.push(`${labelShort(m.k,m.n)}暗刻(${add})`); } }
+      if(waitType==='kanchan'||waitType==='penchan'||waitType==='tanki'){ fu+=2; fb.push(`${waitType==='kanchan'?'カンチャン':waitType==='ペンチャン'?'ペンチャン':'単騎'}(2)`); }
+      if(winType==='tsumo'){ fu+=2; fb.push('ツモ(2)'); } else if(winType==='ron' && isMenzen){ fu+=10; fb.push('門前ロン(10)'); }
+      fu=Math.ceil(fu/10)*10; fuAns=fu; hanAns=13; lastYakuList=['四暗刻']; lastFuBreak=fb; return {fu,hanTotal:13};
+    }
+
+    // 通常役
+    let hanYaku=0, doraHan=0;
+    const yakuList=[];
+
+    if(isMenzen && winType==='tsumo'){ hanYaku++; yakuList.push('ツモ'); }
+    if(isMenzen && isRiichi){ hanYaku++; yakuList.push('立直'); }
+
+    for(const m of lastMelds){
+      if(m.type==='koutsu' && m.k==='z'){
+        if(m.n===5){ hanYaku++; yakuList.push('白'); }
+        if(m.n===6){ hanYaku++; yakuList.push('發'); }
+        if(m.n===7){ hanYaku++; yakuList.push('中'); }
+        if(m.n===bakaze){ hanYaku++; yakuList.push('場風牌'); }
+        if(m.n===jikaze){ hanYaku++; yakuList.push('自風牌'); }
+      }
+    }
+
+    if(lastMelds.every(m=>m.type==='koutsu')){ hanYaku+=2; yakuList.push('対々和'); }
+
+    // 三暗刻（ロンはその刻子除外）
+    let ankoCount=0;
+    for(const m of lastMelds){ if(m.type==='koutsu'){ if(winType==='ron' && draw.kind===m.k && draw.num===m.n) continue; ankoCount++; } }
+    if(ankoCount>=3){ hanYaku+=2; yakuList.push('三暗刻'); }
+
+    // 平和
+    const headIsVal=(lastHead.k==='z' && (lastHead.n>=5||lastHead.n===bakaze||lastHead.n===jikaze));
+    const allShuntsu=lastMelds.every(m=>m.type==='shuntsu');
+    const pinfu=isMenzen && allShuntsu && !headIsVal && waitType==='ryanmen';
+    if(pinfu){ hanYaku++; yakuList.push('平和'); }
+
+    // 断么九
+    const sumArr = a => a.reduce((x,y)=>x+y,0);
+    let usesHonor=sumArr(base13Counts.z)>0 || (draw.kind==='z'); let has19=false;
+    for(const k of ['m','p','s']) for(const i of [1,9]) if((base13Counts[k][i]+(draw.kind===k&&draw.num===i?1:0))>0) has19=true;
+    if(!usesHonor && !has19){ hanYaku++; yakuList.push('断么九'); }
+
+    // 一盃口/二盃口（面前のみ）
+    if(isMenzen){
+      const fullCounts = JSON.parse(JSON.stringify(base13Counts));
+      if(draw.kind==='z') fullCounts.z[draw.num]++; else fullCounts[draw.kind][draw.num]++;
+      const pairs = maxIipeikouPairs(fullCounts);
+      if(pairs>=2){ hanYaku+=3; yakuList.push('二盃口'); }
+      else if(pairs===1){ hanYaku+=1; yakuList.push('一盃口'); }
+    }
+
+    // ドラ（翻のみ）
+    const dCount = (dora.kind==='z'? base13Counts.z[dora.num] : base13Counts[dora.kind][dora.num]) + ((draw.kind===dora.kind && draw.num===dora.num)?1:0);
+    for(let i=0;i<dCount;i++) yakuList.push('ドラ');
+    doraHan = dCount;
+
+    // --- 最低1役チェック（ドラ除く）。無ければ：面前ロンは自動立直付与、それ以外は無効 ---
+    let baseYakuCount = yakuList.filter(y => y !== 'ドラ').length;
+    if (baseYakuCount === 0) {
+      if (isMenzen && winType === 'ron') {
+        isRiichi = true;
+        yakuList.push('立直');
+        hanYaku += 1;
+      } else {
+        return { invalidNoYaku: true };
+      }
+    }
+
+    // 符計算
+    let fu=20, fuBreak=[];
+    for(const m of lastMelds){
+      if(m.type==='koutsu'){
+        const isYaochu=(m.k==='z'||m.n===1||m.n===9); const lbl=labelShort(m.k,m.n);
+        if(winType==='ron' && draw.kind===m.k && draw.num===m.n){ const v=isYaochu?4:2; fu+=v; fuBreak.push(`${lbl}明刻(${v})`); }
+        else{ const v=isYaochu?8:4; fu+=v; fuBreak.push(`${lbl}暗刻(${v})`); }
+      }
+    }
+    if(lastHead.k==='z'){
+      if(lastHead.n===5) { fu+=2; fuBreak.push('白雀頭(2)'); }
+      if(lastHead.n===6) { fu+=2; fuBreak.push('發雀頭(2)'); }
+      if(lastHead.n===7) { fu+=2; fuBreak.push('中雀頭(2)'); }
+      if(lastHead.n===bakaze){ fu+=2; fuBreak.push('場風雀頭(2)'); }
+      if(lastHead.n===jikaze){ fu+=2; fuBreak.push('自風雀頭(2)'); }
+    }
+    if(waitType==='kanchan'){ fu+=2; fuBreak.push('カンチャン(2)'); }
+    else if(waitType==='penchan'){ fu+=2; fuBreak.push('ペンチャン(2)'); }
+    else if(waitType==='tanki'){ fu+=2; fuBreak.push('単騎(2)'); }
+
+    if(pinfu){ fu = (winType==='tsumo')?20:30; lastFuBreak=[winType==='tsumo'?'平和ツモ(20)':'平和ロン(30)']; }
+    else{
+      if(winType==='tsumo'){ fu+=2; fuBreak.push('ツモ(2)'); }
+      else if(winType==='ron' && isMenzen){ fu+=10; fuBreak.push('門前ロン(10)'); }
+      const rounded=Math.ceil(fu/10)*10; if(rounded!==fu) fuBreak.push(`切り上げ→${rounded}符`); fu=rounded; lastFuBreak=fuBreak;
+    }
+
+    fuAns=fu; hanAns=Math.min(hanYaku + doraHan, 13); lastYakuList=yakuList; return {fu, hanTotal:hanAns};
+  }
+
+  /* ユーティリティ */
+  function resetSelectors(){ fuSel.value='--'; hanSel.value='--'; }
+  function tilesTotal(c){ let t=0; ['m','p','s'].forEach(k=>{ for(let i=1;i<=9;i++) t+=c[k][i]; }); for(let i=1;i<=7;i++) t+=c.z[i]; return t; }
+  function forceFallback(){
+    counts={m:Array(10).fill(0),p:Array(10).fill(0),s:Array(10).fill(0),z:Array(8).fill(0)};
+    counts.m[1]=counts.m[2]=counts.m[3]=1; counts.s[3]=counts.s[4]=counts.s[5]=1; counts.p[7]=3; counts.z[7]=2;
+    draw={kind:'p',num:7};
+    lastMelds=[{type:'shuntsu',k:'m',n:1},{type:'shuntsu',k:'s',n:3},{type:'koutsu',k:'p',n:7},{type:'koutsu',k:'z',n:7}];
+    lastHead={k:'z',n:7}; base13Counts=counts;
+  }
+  function clearMemoSelection(){ document.querySelectorAll('.yakuBtn.selected').forEach(b=>b.classList.remove('selected')); }
+
+  function next(){
+    // 結果リセット（テキスト＆クラス）
+    const resultEl = document.getElementById('result');
+    resultEl.textContent = '';
+    resultEl.className = '';
+    document.getElementById('yakuLine').textContent='';
+    document.getElementById('fuLine').textContent='';
+    document.getElementById('err').textContent='';
+    clearMemoSelection();
+
+    base13Counts=null;
+    try{
+      let tries=0;
+      while(true){
+        genProblem();
+        if(!base13Counts || !draw || !draw.kind || tilesTotal(counts)!==13){
+          forceFallback();
+          document.getElementById('err').textContent='生成リトライ: フォールバックで表示しています。';
+        }
+        const r=computeHanFu(); if(r && r.invalidNoYaku){ if(++tries>200){ forceFallback(); break; } continue; } break;
+      }
+      updateMeta(); renderHand13(); renderWin(); resetSelectors();
+    }catch(e){
+      console.error(e);
+      document.getElementById('err').textContent='初期化中にエラー: '+e.message;
+      forceFallback(); renderHand13(); renderWin(); updateMeta();
+    }
+  }
+
+  /* 判定：OK／惜しい／不正解（クラス切替） */
+  function judge(){
+    const fv = parseInt(fuSel.value, 10);
+    const hv = parseInt(hanSel.value, 10);
+    const resultEl = document.getElementById('result');
+
+    if(Number.isNaN(fv) || Number.isNaN(hv)){
+      resultEl.className = 'bad';
+      resultEl.textContent = 'まず「何符」「何翻」を選んでください。';
+      return;
+    }
+
+    const fuOK  = (fv === fuAns);
+    const hanOK = (hv === hanAns);
+
+    if (fuOK && hanOK) {
+      resultEl.className = 'ok';
+      resultEl.textContent = `🟢 正解！（${fuAns}符 / ${hanAns}翻）`;
+    } else if (fuOK || hanOK) {
+      resultEl.className = 'near';
+      resultEl.innerHTML = `<span class="mark">▲</span>惜しい！ → 正解は ${fuAns}符 / ${hanAns}翻`;
+    } else {
+      resultEl.className = 'bad';
+      resultEl.textContent = `❌ 不正解 → 正解は ${fuAns}符 / ${hanAns}翻`;
+    }
+
+    document.getElementById('yakuLine').textContent =
+      lastYakuList.length ? lastYakuList.join('／') : '（役なし）';
+    document.getElementById('fuLine').textContent  =
+      lastFuBreak.length ? lastFuBreak.join('／') : '';
+  }
+
+  function reveal(){
+    const resultEl = document.getElementById('result');
+    resultEl.className = ''; // 露出時は色を固定しない（必要ならok/near/badにしてもOK）
+    resultEl.textContent = `正解: ${fuAns}符 / ${hanAns}翻`;
+    document.getElementById('yakuLine').textContent = lastYakuList.length ? lastYakuList.join('／') : '（役なし）';
+    document.getElementById('fuLine').textContent  = lastFuBreak.length ? lastFuBreak.join('／') : '';
+    resetSelectors();
+  }
+
+  btnJudge.addEventListener('click', judge);
+  btnReveal.addEventListener('click', reveal);
+  btnNext.addEventListener('click', next);
+  window.addEventListener('keydown', e=>{ if(e.key==='Enter') judge(); if(e.key.toLowerCase()==='n') next(); });
+
+  // 役メモ：クリックで薄黄色トグル
+  document.addEventListener('click', (e) => {
+    if (e.target.classList.contains('yakuBtn')) {
+      e.target.classList.toggle('selected');
+    }
+  });
+
+  // 初回
+  if(document.readyState==='loading'){
+    document.addEventListener('DOMContentLoaded', ()=>{ try{ next(); }catch(e){ console.error(e); } });
+  }else{
+    try{ next(); }catch(e){ console.error(e); }
+  }
+})();
+</script>
+</body>
+</html>
