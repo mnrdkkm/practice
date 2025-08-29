@@ -3,13 +3,17 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>テンパイ何待ちクイズ13枚版</title>
+<title>テンパイ何待ち13枚版</title>
 <style>
   :root{ --w: clamp(44px, 10vw, 64px); --h: calc(var(--w) * 1.45); }
   *{ box-sizing: border-box; }
   body{ font-family: system-ui, -apple-system, "Segoe UI", sans-serif; margin:12px; text-align:center; }
   h2{ font-size: clamp(16px, 4.5vw, 22px); margin: 0.2em 0 0.6em; }
-  .board{ display:flex; justify-content:center; flex-wrap:wrap; gap:6px; margin: 0.6em; }
+  .board{
+    display:flex; justify-content:center; flex-wrap:wrap; gap:6px; margin: 0.6em;
+    background-color: #0b6623; /* 緑のラシャ色 */
+    padding: 10px; border-radius: 8px;
+  }
   .choices{ display:flex; justify-content:center; flex-wrap:wrap; gap:8px; margin: 0.6em; }
 
   /* 牌 */
@@ -41,7 +45,7 @@
 </style>
 </head>
 <body>
-  <h2><strong>テンパイ何待ちクイズ13枚版</strong>）</h2>
+  <h2><strong>テンパイ何待ち13枚版</strong></h2>
   <div id="problem" class="board" aria-label="問題の手牌"></div>
 
   <div id="choices" class="choices" aria-label="解答候補"></div>
