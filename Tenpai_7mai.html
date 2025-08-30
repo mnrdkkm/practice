@@ -53,17 +53,16 @@
   <div id="choices" class="choices" aria-label="解答候補（1〜9萬）"></div>
 
   <!-- 連続正解 表示行 -->
-  <div id="streakRow">
-    <span>連続正解数：<strong><span id="streakNow">0</span></strong>回 (最高 <strong><span id="streakBest">0</span></strong>回)</span>
-    <button type="button" id="streakReset">正解数リセット</button>
-  </div>
-
   <!-- 操作ボタン列 -->
   <div class="btnRow">
     <button type="button" id="btnReveal">答えを表示</button>
     <button type="button" id="btnAnswer">解答する (Enter)</button>
     <button type="button" id="btnNext">次の問題 (N)</button>
     <span id="timer" class="timer" aria-live="polite"></span>
+  </div>
+  <div id="streakRow">
+    <span>連続正解数：<strong><span id="streakNow">0</span></strong>回 (最高 <strong><span id="streakBest">0</span></strong>回)</span>
+    <button type="button" id="streakReset">正解数リセット</button>
   </div>
 
   <div class="controls">
