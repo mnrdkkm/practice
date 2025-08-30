@@ -24,7 +24,6 @@
   .winLabel{
     position:absolute; top:-10px; left:50%; transform:translateX(-50%);
     font-weight:800; font-size:12px; background:#fff; border:1px solid #bbb; border-radius:999px; padding:2px 6px;
-    /* ← 折返し防止・横書き固定 */
     white-space: nowrap; writing-mode: horizontal-tb; text-orientation: mixed;
     display:inline-flex; align-items:center; justify-content:center; min-width:max-content;
   }
@@ -38,7 +37,7 @@
   .tile.s{ background:#eafded; } /* 索：薄緑 */
   .m{ color:#c62828; } .p{ color:#1565c0; } .s{ color:#2e7d32; } .honor{ color:#000; }
   .tile .num{ color:#000; }
-  .tile.mini{ width:calc(var(--w)*0.6); height:calc(var(--h)*0.6); font-size:clamp(12px, calc(var(--w)*0.32), 18px); border-width:2px; } /* ミニ牌（ドラ表示用） */
+  .tile.mini{ width:calc(var(--w)*0.6); height:calc(var(--h)*0.6); font-size:clamp(12px, calc(var(--w)*0.32), 18px); border-width:2px; } /* ミメ翠 */
 
   /* コントロール */
   .controlRow{ display:flex; gap:12px; justify-content:center; align-items:center; flex-wrap:wrap; margin:.4rem 0 .6rem; }
@@ -47,24 +46,13 @@
   .controlRow select{ padding:8px 10px; border-radius:10px; border:1px solid #777; font-weight:700; }
 
   /* ▼ 牌サイズ（⏪ / ⏩） */
-  .sizeControls{
-    display:flex; gap:10px; align-items:center; justify-content:center;
-    margin:.25rem 0 .65rem;
-  }
-  .sizeControls .btn{
-    padding:8px 12px; border-radius:10px; border:1px solid #777;
-    background:#f7f7f7; font-weight:800; font-size:clamp(14px,3.4vw,16px);
-    cursor:pointer;
-  }
+  .sizeControls{ display:flex; gap:10px; align-items:center; justify-content:center; margin:.25rem 0 .65rem; }
+  .sizeControls .btn{ padding:8px 12px; border-radius:10px; border:1px solid #777; background:#f7f7f7; font-weight:800; font-size:clamp(14px,3.4vw,16px); cursor:pointer; }
   .sizeControls .btn:hover{ background:#f1f1f1; }
-  .sizeControls .label{
-    min-width:72px; text-align:center; font-weight:900;
-    padding:4px 8px; border-radius:999px; border:2px solid #c7d6ff; background:#eef3ff;
-    font-variant-numeric: tabular-nums;
-  }
+  .sizeControls .label{ min-width:72px; text-align:center; font-weight:900; padding:4px 8px; border-radius:999px; border:2px solid #c7d6ff; background:#eef3ff; font-variant-numeric: tabular-nums; }
 
   /* 結果エリア：常設（高さ確保） */
-  #resultPanel{ min-height: 5.6em; display:flex; flex-direction:column; gap:.15rem; align-items:center; justify-content:flex-start; margin:.4rem 0 .6rem; }
+  #resultPanel{ min-height: 6.8em; display:flex; flex-direction:column; gap:.15rem; align-items:center; justify-content:flex-start; margin:.4rem 0 .6rem; }
   /* 状態クラス（OK/惜しい/不正解） */
   #result.ok   { color:#0a7d00; }
   #result.near { color:#b08900; }
@@ -73,6 +61,8 @@
 
   #yakuLine{ font-weight:700; }
   #fuLine{ color:#444; }
+  .note{ color:#666; font-size:12px; font-weight:700; } /* ← 注記表示 */
+
   #err{ color:#d32f2f; font-weight:700; font-size:12px; margin-top:6px; }
 
   /* ▼ 役メモ / 点数表 切替タブ */
@@ -102,9 +92,7 @@
   .scoreTable td.picked{background:#fff2b3 !important; box-shadow: inset 0 0 0 2px #e0c14e}
   .scoreTable td:hover{background:#f9fbff}
 
-  /* ===== 画面幅フィット調整（スマホ最優先） ===== */
-
-  /* 横スクロールを完全に抑止し、ノッチの安全領域に寄せる */
+  /* ===== 画面幅フィット調整 ===== */
   html, body { max-width: 100%; overflow-x: hidden; }
   body{
     margin: clamp(6px, 2.6vw, 12px);
@@ -112,26 +100,15 @@
     padding-right: env(safe-area-inset-right);
     padding-bottom: env(safe-area-inset-bottom);
   }
-
-  /* 牌や見出しの既定サイズを少しだけ小回りが利くよう調整 */
   @media (max-width: 420px){
-    :root{
-      --w: clamp(34px, 7.0svw, 56px);
-      --h: calc(var(--w) * 1.45);
-    }
+    :root{ --w: clamp(34px, 7.0svw, 56px); --h: calc(var(--w) * 1.45); }
     h2{    font-size: clamp(16px, 5.2vw, 22px); }
     .meta{ font-size: clamp(15px, 4.0vw, 19px); gap: 8px; }
     .badge{ padding: 4px 10px; }
     .handRow{ gap: 12px; }
     .board{ gap: 4px; padding: 8px; }
   }
-
-  /* レイアウトの各ブロックは横幅をはみ出さないように */
-  .board, .handRow, .meta, .controlRow, #resultPanel, .memo, .scoreWrap{
-    max-width: 100%;
-  }
-
-  /* わずかなガタつき対策：縦持ち時は幅を安定させる（svw が使える端末優先） */
+  .board, .handRow, .meta, .controlRow, #resultPanel, .memo, .scoreWrap{ max-width: 100%; }
   @supports (width: 1svw){
     @media (orientation: portrait) and (max-width: 900px){
       .memo, .scoreWrap{ margin-left: auto; margin-right: auto; }
@@ -161,17 +138,16 @@
     <button type="button" id="btnNext">次の問題 (N)</button>
   </div>
 
-
-
   <!-- 結果表示領域（常設） -->
   <div id="resultPanel">
     <div id="result" aria-live="polite"></div>
     <div id="yakuLine" aria-live="polite"></div>
     <div id="fuLine" aria-live="polite"></div>
+    <div id="noteLine" class="note" aria-live="polite"></div><!-- ← 注記をここに出す -->
     <div id="err" aria-live="polite"></div>
   </div>
 
-  <!-- ▼ タイルサイズ（20–80px／5px刻み） -->
+  <!-- ▼ 牌サイズ（20–80px／5px刻み） -->
   <div class="sizeControls" aria-label="タイルサイズ調整">
     <button type="button" id="sizeDown" class="btn">⏪ 小さく</button>
     <span class="label" id="sizeLabel">--</span>
@@ -292,7 +268,8 @@
 
   /* メタ：場風+自風+ドラ / 立直+和了 を1つずつにまとめる */
   function updateMeta(){
-    metaEl.innerHTML='';
+    const meta = document.getElementById('meta');
+    meta.innerHTML='';
     const windBox = document.createElement('div');
     windBox.className = 'badge group';
     const s1 = document.createElement('span'); s1.textContent = `場風:${bakaze===1?'東':'南'}`;
@@ -302,7 +279,7 @@
     const dLabel = document.createElement('span'); dLabel.textContent='ドラ';
     const dTile  = tileNode(dora.kind, dora.num); dTile.classList.add('mini'); dTile.setAttribute('aria-label','ドラ表示');
     windBox.append(s1, sep1, s2, sep2, dLabel, dTile);
-    metaEl.appendChild(windBox);
+    meta.appendChild(windBox);
 
     const statusBox = document.createElement('div');
     statusBox.className = 'badge group';
@@ -310,7 +287,7 @@
     const sep3 = document.createElement('span'); sep3.className='sep'; sep3.textContent='|';
     const s4 = document.createElement('span'); s4.textContent = `和了:${winType==='tsumo'?'ツモ':'ロン'}`;
     statusBox.append(s3, sep3, s4);
-    metaEl.appendChild(statusBox);
+    meta.appendChild(statusBox);
   }
 
   /* 一盃口/二盃口 厳密判定ユーティリティ */
@@ -321,22 +298,11 @@
     for(const k of ['m','p','s']) for(let n=1;n<=9;n++) if(fullCounts[k][n]>=2) pairChoices.push({k,n});
     for(let n=1;n<=7;n++) if(fullCounts.z[n]>=2) pairChoices.push({k:'z',n});
 
-    const pickFirstTile=(c)=>{
-      for(const k of ['m','p','s','z']){
-        const maxN=(k==='z'?7:9);
-        for(let n=1;n<=maxN;n++) if(c[k][n]>0) return {k,n};
-      }
-      return null;
-    };
+    const pickFirstTile=(c)=>{ for(const k of ['m','p','s','z']){ const maxN=(k==='z'?7:9); for(let n=1;n<=maxN;n++) if(c[k][n]>0) return {k,n}; } return null; };
     const dfs=(c, melds)=>{
       if(melds.length===4){
         const cnt=new Map();
-        for(const m of melds){
-          if(m.type==='shuntsu'){
-            const key=`${m.k}:${m.n}`;
-            cnt.set(key,(cnt.get(key)||0)+1);
-          }
-        }
+        for(const m of melds){ if(m.type==='shuntsu'){ const key=`${m.k}:${m.n}`; cnt.set(key,(cnt.get(key)||0)+1); } }
         let pairs=0; for(const v of cnt.values()) pairs+=Math.floor(v/2);
         if(pairs>best) best=pairs; return;
       }
@@ -351,8 +317,7 @@
     for(const head of pairChoices){
       const c=cloneCounts(fullCounts);
       c[head.k][head.n]-=2;
-      dfs(c, []);
-      if(best===2) break;
+      dfs(c, []); if(best===2) break;
     }
     return best;
   }
@@ -448,7 +413,6 @@
     let hanYaku=0, doraHan=0;
     const yakuList=[];
 
-    if(isMenzen && winType==='ツモ'){ /* 保険 */ }
     if(isMenzen && winType==='tsumo'){ hanYaku++; yakuList.push('ツモ'); }
     if(isMenzen && isRiichi){ hanYaku++; yakuList.push('立直'); }
 
@@ -472,7 +436,7 @@
     // 平和
     const headIsVal=(lastHead.k==='z' && (lastHead.n>=5||lastHead.n===bakaze||lastHead.n===jikaze));
     const allShuntsu=lastMelds.every(m=>m.type==='shuntsu');
-    const pinfu=isMenzen && allShuntsu && !headIsVal && waitType==='ryanmen';
+    const pinfu=isMenzen && allShuntsu && !headIsVal && classifyWait(base13Counts, draw)==='ryanmen';
     if(pinfu){ hanYaku++; yakuList.push('平和'); }
 
     // 断么九
@@ -495,7 +459,7 @@
     for(let i=0;i<dCount;i++) yakuList.push('ドラ');
     doraHan = dCount;
 
-    // --- 最低1役チェック（ドラ除く）。無ければ：面前ロンは自動立直付与、それ以外は無効 ---
+    // --- 最低1役チェック（ドラ除く） ---
     let baseYakuCount = yakuList.filter(y => y !== 'ドラ').length;
     if (baseYakuCount === 0) {
       if (isMenzen && winType === 'ron') {
@@ -523,9 +487,10 @@
       if(lastHead.n===bakaze){ fu+=2; fuBreak.push('場風雀頭(2)'); }
       if(lastHead.n===jikaze){ fu+=2; fuBreak.push('自風雀頭(2)'); }
     }
-    if(waitType==='kanchan'){ fu+=2; fuBreak.push('カンチャン(2)'); }
-    else if(waitType==='penchan'){ fu+=2; fuBreak.push('ペンチャン(2)'); }
-    else if(waitType==='tanki'){ fu+=2; fuBreak.push('単騎(2)'); }
+    const wType = classifyWait(base13Counts, draw);
+    if(wType==='kanchan'){ fu+=2; fuBreak.push('カンチャン(2)'); }
+    else if(wType==='penchan'){ fu+=2; fuBreak.push('ペンチャン(2)'); }
+    else if(wType==='tanki'){ fu+=2; fuBreak.push('単騎(2)'); }
 
     if(pinfu){ fu = (winType==='tsumo')?20:30; lastFuBreak=[winType==='tsumo'?'平和ツモ(20)':'平和ロン(30)']; }
     else{
@@ -550,13 +515,14 @@
   function clearMemoSelection(){ document.querySelectorAll('.yakuBtn.selected').forEach(b=>b.classList.remove('selected')); }
 
   function next(){
-    // 結果リセット（テキスト＆クラス）
     const resultEl = document.getElementById('result');
+    const noteEl   = document.getElementById('noteLine');
     resultEl.textContent = '';
     resultEl.className = '';
     document.getElementById('yakuLine').textContent='';
     document.getElementById('fuLine').textContent='';
     document.getElementById('err').textContent='';
+    noteEl.textContent='';
     clearMemoSelection();
 
     base13Counts=null;
@@ -571,6 +537,11 @@
         const r=computeHanFu(); if(r && r.invalidNoYaku){ if(++tries>200){ forceFallback(); break; } continue; } break;
       }
       updateMeta(); renderHand13(); renderWin(); resetSelectors();
+
+      // ← 5翻以上なら注記を常設表示
+      if (hanAns >= 5){
+        noteEl.textContent = '※５翻以上のときは符の入力無しでOK！';
+      }
     }catch(e){
       console.error(e);
       document.getElementById('err').textContent='初期化中にエラー: '+e.message;
@@ -580,18 +551,42 @@
             .forEach(td => td.classList.remove('picked'));
   }
 
-  /* 判定：OK／惜しい／不正解（クラス切替） */
+  /* 判定：5翻以上は符を無視して採点 */
   function judge(){
     const fv = parseInt(fuSel.value, 10);
     const hv = parseInt(hanSel.value, 10);
     const resultEl = document.getElementById('result');
+    const noteEl   = document.getElementById('noteLine');
 
+    // 5翻以上のとき：翻のみ必須
+    if (hanAns >= 5){
+      if (Number.isNaN(hv)){
+        resultEl.className = 'bad';
+        resultEl.textContent = 'まず「何翻」を選んでください。（５翻以上は符の入力不要）';
+        return;
+      }
+      const hanOK = (hv === hanAns);
+      if (hanOK){
+        resultEl.className = 'ok';
+        resultEl.textContent = `🟢 正解！（${fuAns}符 / ${hanAns}翻）`; // 符は表示だけ
+      }else{
+        resultEl.className = 'bad';
+        resultEl.textContent = `❌ 不正解 → 正解は ${fuAns}符 / ${hanAns}翻`;
+      }
+      document.getElementById('yakuLine').textContent =
+        lastYakuList.length ? lastYakuList.join('／') : '（役なし）';
+      document.getElementById('fuLine').textContent  =
+        lastFuBreak.length ? lastFuBreak.join('／') : '';
+      noteEl.textContent = '※５翻以上のときは符の入力無しでOK！';
+      return;
+    }
+
+    // 〜4翻までは従来どおり：符も翻も採点
     if(Number.isNaN(fv) || Number.isNaN(hv)){
       resultEl.className = 'bad';
       resultEl.textContent = 'まず「何符」「何翻」を選んでください。';
       return;
     }
-
     const fuOK  = (fv === fuAns);
     const hanOK = (hv === hanAns);
 
@@ -610,14 +605,17 @@
       lastYakuList.length ? lastYakuList.join('／') : '（役なし）';
     document.getElementById('fuLine').textContent  =
       lastFuBreak.length ? lastFuBreak.join('／') : '';
+    document.getElementById('noteLine').textContent = '';
   }
 
   function reveal(){
     const resultEl = document.getElementById('result');
+    const noteEl   = document.getElementById('noteLine');
     resultEl.className = '';
     resultEl.textContent = `正解: ${fuAns}符 / ${hanAns}翻`;
     document.getElementById('yakuLine').textContent = lastYakuList.length ? lastYakuList.join('／') : '（役なし）';
     document.getElementById('fuLine').textContent  = lastFuBreak.length ? lastFuBreak.join('／') : '';
+    if (hanAns >= 5) noteEl.textContent = '※５翻以上のときは符の入力無しでOK！';
     resetSelectors();
   }
 
@@ -652,7 +650,7 @@
   const FU_ROWS = ['20符','25符','30符','40符','50符','60符'];
   const HAN_HEAD = ['1飜','2飜','3飜','4飜','5飜'];
   const CHILD = [
-    ['----','400/700','700/1300','1300/2600','満貫'],
+    ['----','400/700','700/1300','1300/2600','2000/4000'],
     ['----','1600','3200','6400','満貫'],
     ['1000','2000','3900','満貫','満貫'],
     ['1300','2600','5200','満貫','満貫'],
@@ -686,8 +684,7 @@
       for(let c=0;c<HAN_HEAD.length;c++){
         const td=document.createElement('td'); td.textContent = bodyData[r][c];
         td.addEventListener('click', (e) => {
-          document.querySelectorAll('.scoreTable td.picked')
-                  .forEach(x => x.classList.remove('picked'));
+          document.querySelectorAll('.scoreTable td.picked').forEach(x => x.classList.remove('picked'));
           e.currentTarget.classList.add('picked');
         });
         tr.appendChild(td);
