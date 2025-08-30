@@ -16,7 +16,7 @@
 
   /* ===== ベースレイアウト（PC/タブレット） ===== */
   .frame{
-    min-height:100svh;              /* ← iOSでの表示領域に追従 */
+    min-height:100svh;              /* iOSでの表示領域に追従 */
     display:grid; grid-template-columns:380px 1fr;
     border:3px solid var(--line);
   }
@@ -26,8 +26,15 @@
   /* 黒板メニュー */
   .woodBox{ height:100% }
   .chalk{ height:100%; display:flex; flex-direction:column; gap:16px; padding:18px 16px; font-size:18.5px; }
-  .sideTools{ position:sticky; top:0; z-index:5; display:flex; align-items:center; justify-content:space-between;
-              padding:10px 6px 14px; border-bottom:1px solid #ccc; background:#fff; font-size:18px; }
+
+  /* ← 白帯を消して黒板に溶け込ませる */
+  .sideTools{
+    position:sticky; top:0; z-index:5; display:flex; align-items:center; justify-content:space-between;
+    padding:8px 16px;
+    background:transparent;         /* 以前: #fff */
+    border-bottom:0;                 /* 以前: 1px solid #ccc */
+    font-size:18px;
+  }
   .backLink{ color:inherit; font-weight:800; text-decoration:none }
   .backLink:hover{ text-decoration:underline }
   .tool{ border:1px solid #bbb; background:#fff; border-radius:10px; padding:8px 12px; font-weight:800; cursor:pointer; font-size:16.5px }
@@ -73,11 +80,16 @@
   body.theme-chalk .btn{ font-family:var(--chalk-font); color:#fefefe; background:transparent; border:2px dashed #ffffff88; border-radius:12px; box-shadow:0 0 0 1px #ffffff1e inset,0 0 12px #ffffff1a inset; }
   body.theme-chalk .btn:hover{ background:#ffffff10; border-color:#ffffffaa; transform:translateY(-1px); }
   body.theme-chalk .btn.active{ outline:0; box-shadow:0 0 0 2px #fff inset,0 0 18px #ffffff55 inset; }
-  body.theme-chalk .sideTools{ background:linear-gradient(#ffffffcc,#ffffffee); border-bottom:3px solid #d7d7d7; }
   body.theme-chalk .tool{ background:#fff; border:1px solid #d3d3d3; color:#222; box-shadow:0 1px 0 #fff inset,0 2px 6px #00000014; }
   body.theme-chalk a{ color:#fdfdfd } body.theme-chalk a:hover{ color:#fff; text-decoration:underline }
 
-  /* ===== モバイル：900px以下はドロワー化（※CSS変数不使用） ===== */
+  /* ====== PCではモバイル用UIを隠す（ベースで非表示） ====== */
+  .mobileMenuBtn,
+  .drawerBackdrop{
+    display:none;
+  }
+
+  /* ===== モバイル：900px以下はドロワー化 ===== */
   @media (max-width: 900px){
     .frame{ grid-template-columns:1fr; grid-template-rows:1fr; } /* 右だけ流す */
     .left{
@@ -86,19 +98,65 @@
       z-index:1001; border-right:3px solid var(--line); border-bottom:0;
     }
     body.drawer-open .left{ transform:translateX(0); box-shadow:8px 0 24px #0007; }
-    body.drawer-open{ overflow:hidden } /* ← 背面スクロール禁止 */
+    body.drawer-open{ overflow:hidden } /* 背面スクロール禁止 */
 
+    /* モバイル時だけ表示＆固定配置 */
     .mobileMenuBtn{
+      display:block;
       position:fixed; top:10px; left:10px; z-index:1002;
-      border:1px solid #bbb; background:#fff; border-radius:10px; padding:8px 12px;
-      font-weight:800; cursor:pointer; box-shadow:0 2px 8px #0002;
+      border:1px solid #bbb; background:#fff; border-radius:10px;
+      padding:8px 12px; font-weight:800; cursor:pointer; box-shadow:0 2px 8px #0002;
     }
+
     .drawerBackdrop{
-      position:fixed; inset:0; background:#0008; opacity:0; pointer-events:none;
-      transition:opacity .2s ease; z-index:1000; backdrop-filter:blur(2px);
+      display:block;
+      position:fixed; inset:0; background:#0008;
+      opacity:0; pointer-events:none; transition:opacity .2s ease; z-index:1000;
+      backdrop-filter:blur(2px);
     }
     body.drawer-open .drawerBackdrop{ opacity:1; pointer-events:auto; }
   }
+
+/* === PC で左ペイン上端の白い帯を完全に消す === */
+@media (min-width: 901px){
+
+  /* 1) sideTools行はPCでは出さない（高さも余白もゼロ） */
+  .left .sideTools{
+    display: none !important;
+    background: transparent !important;
+    border: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+  }
+
+  /* 2) 上端の余白が食い込んでも帯が出ないように、上方向の余白を潰す */
+  .left .chalk{
+    padding-top: 0 !important;
+  }
+  .left .chalk > :first-child{
+    margin-top: 0 !important;
+  }
+
+  /* 3) 万が一背景が抜けても木枠色で覆う（擬似要素で上端を塗る） */
+  .left{
+    position: relative;
+  }
+  .left::before{
+    content: "";
+    position: absolute;
+    left: 0; right: 0; top: 0;
+    height: var(--wood-w, 14px);    /* 木枠と同じ厚み */
+    background: #7b4a21;            /* 木枠のベース色 */
+    z-index: 0;
+  }
+
+  /* 木枠のベース色の塗りつぶし（グラデが切れても白が出ないように保険） */
+  body.theme-chalk .woodBox{
+    background-color: #7b4a21 !important;
+  }
+}
+
 </style>
 </head>
 <body class="theme-chalk">
@@ -107,10 +165,6 @@
   <aside class="left" aria-label="メニュー" id="drawer">
     <div class="woodBox">
       <div class="chalk">
-        <div class="sideTools">
-          <a href="#" id="goHome" class="backLink">← トップページに戻る</a>
-          <div class="toolGroup"><button class="tool" id="reload">再読込</button></div>
-        </div>
 
         <div class="title">麻雀練習</div>
 
@@ -127,7 +181,13 @@
           <div class="list">
             <button class="btn" data-id="hufan">・符/翻を数える</button>
           </div>
+
+          <br>
+          <div class="sideTools">
+            <a href="#" id="goHome" class="backLink"><span style="color:gray">トップページに戻る</span></a>
+          </div>
         </div>
+
       </div>
     </div>
   </aside>

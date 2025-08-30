@@ -50,22 +50,22 @@
 
   <div id="choices" class="choices" aria-label="解答候補"></div>
 
+  <!-- 操作ボタン列（ボタン間の空白を広めに） -->
+  <div class="btnRow" style="display:flex; gap:14px; justify-content:center; flex-wrap:wrap; align-items:center;">
+    <button type="button" id="btnReveal">答えを表示</button>
+    <button type="button" id="btnHint">ヒント（待ち枚数）</button>
+    <button type="button" id="btnAnswer">解答する (Enter)</button>
+    <button type="button" id="btnNext">次の問題 (N)</button>
+  </div>
+<BR>
   <!-- 連続正解 表示行 -->
   <div id="streakRow">
     <span>連続正解数：<strong><span id="streakNow">0</span></strong>回 (最高 <strong><span id="streakBest">0</span></strong>回)</span>
     <button type="button" id="streakReset">正解数リセット</button>
   </div>
 
-  <!-- 操作ボタン列（ボタン間の空白を広めに） -->
-  <div class="btnRow" style="display:flex; gap:14px; justify-content:center; flex-wrap:wrap; align-items:center;">
-    <button type="button" id="btnAnswer">解答する (Enter)</button>
-    <button type="button" id="btnHint">ヒント（待ち枚数）</button>
-    <button type="button" id="btnReveal">答えを表示</button>
-    <button type="button" id="btnNext">次の問題 (N)</button>
-  </div>
-
   <div class="controls">
-    <label>サイズ: <input id="sizeRange" type="range" min="36" max="80" step="1" value="0"> <span id="sizeLabel">自動</span></label>
+    <label>サイズ: <input id="sizeRange" type="range" min="20" max="80" step="1" value="0"> <span id="sizeLabel">自動</span></label>
     <label><input id="udToggle" type="checkbox"> UDモード（高コントラスト）</label>
   </div>
 
