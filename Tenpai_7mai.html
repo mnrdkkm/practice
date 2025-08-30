@@ -61,10 +61,31 @@
 
   .controls{ display:flex; gap:12px; align-items:center; justify-content:center; flex-wrap:wrap; margin:6px 0 2px; font-size:clamp(12px,3.2vw,14px); }
   .btnRow{ display:flex; gap:14px; justify-content:center; flex-wrap:wrap; align-items:center; }
-  .timer{ font-weight:800; min-width: 6ch; display:inline-block; }
+  .timer{ display:none !important; } /* ← 数字のカウントダウンは非表示にする */
   #err{ color:#d32f2f; font-weight:700; font-size:12px; margin-top:6px; }
   #streakRow{ font-size: clamp(14px, 4vw, 18px); display:flex; gap:10px; align-items:center; justify-content:center; flex-wrap:wrap; }
   #streakRow strong{ font-size: 1.1em; }
+
+  /* 残り時間メーター（大きめ） */
+  .timeMeter{
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    font-weight: 900;
+    letter-spacing: 2px;
+    text-align: center;
+    margin-top: 8px;
+    min-height: 1.6em;   /* 空でも高さ確保してピコつき防止 */
+    font-size: clamp(22px, 6.2vw, 28px);
+    transition: color .15s ease, transform .15s ease;
+  }
+  .timeMeter.warn{
+    color:#c62828;
+    animation: tmPulse .9s ease-in-out infinite;
+  }
+  @keyframes tmPulse{
+    0%{   transform: scale(1); }
+    50%{  transform: scale(1.06); }
+    100%{ transform: scale(1); }
+  }
 
   /* 結果表示スロット（固定してレイアウトの揺れを防止） */
   .resultSlot{
@@ -115,6 +136,9 @@
     <span id="timer" class="timer" aria-live="polite"></span>
   </div>
 
+  <!-- 残り時間メーター（■/□表示） -->
+  <div id="timeMeter" class="timeMeter" aria-live="polite" aria-label="残り時間"></div>
+
   <!-- 結果（固定スロット内） -->
   <div class="resultSlot">
     <div id="result" role="status" aria-live="polite"></div>
@@ -160,7 +184,8 @@
 
   const udToggle  = document.getElementById('udToggle');
   const speedToggle = document.getElementById('speedToggle');
-  const timerEl   = document.getElementById('timer');
+  const timerEl   = document.getElementById('timer');      // 今回は非表示にする
+  const timeMeterEl = document.getElementById('timeMeter'); // 大きな■/□バー
 
   const streakNowEl  = document.getElementById('streakNow');
   const streakBestEl = document.getElementById('streakBest');
@@ -338,9 +363,49 @@
     if(waits.size<=1) return makeProblem();
   }
 
+  // ===== メーター描画・タイマー制御 =====
+  function renderMeter(sec){
+    const total = timeLimit; // 10
+    const n = Math.max(0, Math.min(total, sec|0));
+    const bar = '■'.repeat(n) + '□'.repeat(total - n);
+    if (timeMeterEl){
+      timeMeterEl.textContent = `0${bar}10`; // 例: 0■■■■■■■■■□10
+      timeMeterEl.setAttribute('aria-label', `残り ${n} 秒`);
+      // 3秒以下で赤＆軽い鼓動アニメ
+      if (speedMode && n <= 3 && n > 0) timeMeterEl.classList.add('warn');
+      else timeMeterEl.classList.remove('warn');
+      if (n === 0) timeMeterEl.classList.remove('warn');
+    }
+  }
+
+  // ---- タイマーを安全に止める & 表示を消す ----
+  function stopTimer(){
+    if(timerId){ clearInterval(timerId); timerId = null; }
+    if (timerEl) timerEl.textContent = '';      // 数字カウントは使わない
+    if (timeMeterEl) timeMeterEl.textContent = '';
+    timeMeterEl?.classList.remove('warn');
+  }
+
+  function startTimer(){
+    if(!speedMode){ if(timerEl) timerEl.textContent=''; renderMeter(0); return; }
+    stopTimer();                    // 重複起動防止
+    timeLeft = timeLimit;
+    if (timerEl) timerEl.textContent = ''; // 数字カウントは表示しない
+    renderMeter(timeLeft);
+    timerId = setInterval(()=>{
+      timeLeft -= 1;
+      renderMeter(timeLeft);
+      if(timeLeft<=0){
+        clearInterval(timerId); timerId=null;
+        if(selected.size===0){ resultEl.className=''; resultEl.textContent = '⌛ タイムアップ！'; }
+        judge();
+      }
+    }, 1000);
+  }
+
   // ===== 判定 =====
   function judge(){
-    if(timerId){ clearInterval(timerId); timerId=null; }
+    stopTimer(); // 判定時は止める（多重実行防止）
     const pick=[...selected].sort((a,b)=>a-b).join(',');
     const ans=[...waits].sort((a,b)=>a-b).join(',');
     if(pick===ans){
@@ -363,38 +428,14 @@
     if(speedMode){ setTimeout(next, pick===ans ? 800 : 1500); }
   }
 
-// ---- タイマーを安全に止める & 表示を消す ----
-function stopTimer(){
-  if(timerId){ clearInterval(timerId); timerId = null; }
-  timerEl.textContent = '';
-}
-
-  // ===== タイマー =====
-function startTimer(){
-  if(!speedMode){ timerEl.textContent=''; return; }
-  stopTimer();                    // ← 追加：重複起動を防ぐ
-  timeLeft = timeLimit;
-  timerEl.textContent = `残り ${timeLeft}秒`;
-  timerId = setInterval(()=>{
-    timeLeft -= 1;
-    if(timeLeft<=0){
-      clearInterval(timerId); timerId=null;
-      if(selected.size===0){ resultEl.className=''; resultEl.textContent = '⌛ タイムアップ！'; }
-      judge();
-    } else {
-      timerEl.textContent = `残り ${timeLeft}秒`;
-    }
-  }, 1000);
-}
-
   // ===== 次の問題 =====
-function next(){
-  selected.clear(); resultEl.className=''; resultEl.textContent=''; errEl.textContent='';
-  stopTimer();                     // ← 追加：前のタイマーを確実に停止
-  makeProblem(); renderHand(); renderChoices();
-  if(speedMode){ btnReveal.disabled = true; startTimer(); }
-  else{ btnReveal.disabled = false; /* timerEl は stopTimer() 済み */ }
-}
+  function next(){
+    selected.clear(); resultEl.className=''; resultEl.textContent=''; errEl.textContent='';
+    stopTimer();                     // 前のタイマーを確実停止（メーターも空に）
+    makeProblem(); renderHand(); renderChoices();
+    if(speedMode){ btnReveal.disabled = true; startTimer(); }
+    else{ btnReveal.disabled = false; /* 表示は stopTimer() 済み */ }
+  }
 
   // ===== サイズ（⏪/⏩）＆ UD =====
   const SIZE_MIN=20, SIZE_MAX=80, SIZE_STEP=5;
@@ -424,23 +465,18 @@ function next(){
   // UD
   udToggle.addEventListener('change', ()=>{ document.body.classList.toggle('ud', udToggle.checked); });
 
-  // スピードモード・スイッチ
-// 旧: speedToggle.addEventListener('change', ()=>{ speedMode = speedToggle.checked; ... next(); });
-// 新:
-speedToggle.addEventListener('change', ()=>{
-  speedMode = speedToggle.checked;
-  try{ localStorage.setItem(LS_SPEED, speedMode ? '1' : '0'); }catch(_){}
-
-  if (speedMode){
-    // ON：答え表示を禁止して、その場でカウントダウン開始（問題はそのまま）
-    btnReveal.disabled = true;
-    startTimer();
-  }else{
-    // OFF：タイマーを止めて、答え表示を許可（問題はそのまま続行）
-    btnReveal.disabled = false;
-    stopTimer();
-  }
-});
+  // スピードモード・スイッチ（ON⇄OFFで問題は維持／タイマーのみ制御）
+  speedToggle.addEventListener('change', ()=>{
+    speedMode = speedToggle.checked;
+    try{ localStorage.setItem(LS_SPEED, speedMode ? '1' : '0'); }catch(_){}
+    if (speedMode){
+      btnReveal.disabled = true;
+      startTimer();   // その場でカウント開始
+    }else{
+      btnReveal.disabled = false;
+      stopTimer();    // その場で停止＆表示クリア
+    }
+  });
 
   // ===== 初期化 =====
   function init(){
