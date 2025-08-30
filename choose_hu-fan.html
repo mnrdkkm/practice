@@ -46,6 +46,23 @@
   .controlRow label{ display:inline-flex; align-items:center; gap:6px; font-weight:700; }
   .controlRow select{ padding:8px 10px; border-radius:10px; border:1px solid #777; font-weight:700; }
 
+  /* ▼ 牌サイズ（⏪ / ⏩） */
+  .sizeControls{
+    display:flex; gap:10px; align-items:center; justify-content:center;
+    margin:.25rem 0 .65rem;
+  }
+  .sizeControls .btn{
+    padding:8px 12px; border-radius:10px; border:1px solid #777;
+    background:#f7f7f7; font-weight:800; font-size:clamp(14px,3.4vw,16px);
+    cursor:pointer;
+  }
+  .sizeControls .btn:hover{ background:#f1f1f1; }
+  .sizeControls .label{
+    min-width:72px; text-align:center; font-weight:900;
+    padding:4px 8px; border-radius:999px; border:2px solid #c7d6ff; background:#eef3ff;
+    font-variant-numeric: tabular-nums;
+  }
+
   /* 結果エリア：常設（高さ確保） */
   #resultPanel{ min-height: 5.6em; display:flex; flex-direction:column; gap:.15rem; align-items:center; justify-content:flex-start; margin:.4rem 0 .6rem; }
   /* 状態クラス（OK/惜しい/不正解） */
@@ -85,48 +102,45 @@
   .scoreTable td.picked{background:#fff2b3 !important; box-shadow: inset 0 0 0 2px #e0c14e}
   .scoreTable td:hover{background:#f9fbff}
 
-/* ===== 画面幅フィット調整（スマホ最優先） ===== */
+  /* ===== 画面幅フィット調整（スマホ最優先） ===== */
 
-/* 横スクロールを完全に抑止し、ノッチの安全領域に寄せる */
-html, body { max-width: 100%; overflow-x: hidden; }
-body{
-  /* 端末によって 12px が狭く感じるので、画面幅に追従する可変マージンに */
-  margin: clamp(6px, 2.6vw, 12px);
-  padding-left:  env(safe-area-inset-left);
-  padding-right: env(safe-area-inset-right);
-  padding-bottom: env(safe-area-inset-bottom);
-}
-
-/* 牌や見出しの既定サイズを少しだけ小回りが利くよう調整 */
-@media (max-width: 420px){
-  :root{
-    /* 牌の基準幅。従来 8.2vw だと横に広めなので 7.0svw に調整（iOS揺れ対策に svw を優先） */
-    --w: clamp(34px, 7.0svw, 56px);
-    --h: calc(var(--w) * 1.45);
+  /* 横スクロールを完全に抑止し、ノッチの安全領域に寄せる */
+  html, body { max-width: 100%; overflow-x: hidden; }
+  body{
+    margin: clamp(6px, 2.6vw, 12px);
+    padding-left:  env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+    padding-bottom: env(safe-area-inset-bottom);
   }
-  h2{    font-size: clamp(16px, 5.2vw, 22px); }
-  .meta{ font-size: clamp(15px, 4.0vw, 19px); gap: 8px; }
-  .badge{ padding: 4px 10px; }
-  .handRow{ gap: 12px; }
-  .board{ gap: 4px; padding: 8px; }
-}
 
-/* レイアウトの各ブロックは横幅をはみ出さないように */
-.board, .handRow, .meta, .controlRow, #resultPanel, .memo, .scoreWrap{
-  max-width: 100%;
-}
-
-/* わずかなガタつき対策：縦持ち時は幅を安定させる（svw が使える端末優先） */
-@supports (width: 1svw){
-  @media (orientation: portrait) and (max-width: 900px){
-    .memo, .scoreWrap{ margin-left: auto; margin-right: auto; }
+  /* 牌や見出しの既定サイズを少しだけ小回りが利くよう調整 */
+  @media (max-width: 420px){
+    :root{
+      --w: clamp(34px, 7.0svw, 56px);
+      --h: calc(var(--w) * 1.45);
+    }
+    h2{    font-size: clamp(16px, 5.2vw, 22px); }
+    .meta{ font-size: clamp(15px, 4.0vw, 19px); gap: 8px; }
+    .badge{ padding: 4px 10px; }
+    .handRow{ gap: 12px; }
+    .board{ gap: 4px; padding: 8px; }
   }
-}
 
+  /* レイアウトの各ブロックは横幅をはみ出さないように */
+  .board, .handRow, .meta, .controlRow, #resultPanel, .memo, .scoreWrap{
+    max-width: 100%;
+  }
+
+  /* わずかなガタつき対策：縦持ち時は幅を安定させる（svw が使える端末優先） */
+  @supports (width: 1svw){
+    @media (orientation: portrait) and (max-width: 900px){
+      .memo, .scoreWrap{ margin-left: auto; margin-right: auto; }
+    }
+  }
 </style>
 </head>
 <body>
-  <h2>役判定クイズ（和了形 → 成立役を答える）</h2>
+  <h2>役判定クイズ（和了形から符と翻数を計算）</h2>
   <div id="meta" class="meta"></div>
 
   <div class="handRow">
@@ -145,6 +159,13 @@ body{
     <label>何翻：<select id="hanSel"><option>--</option></select></label>
     <button type="button" id="btnJudge">解答する (Enter)</button>
     <button type="button" id="btnNext">次の問題 (N)</button>
+  </div>
+
+  <!-- ▼ タイルサイズ（20–80px／5px刻み） -->
+  <div class="sizeControls" aria-label="タイルサイズ調整">
+    <button type="button" id="sizeDown" class="btn">⏪ 小さく</button>
+    <span class="label" id="sizeLabel">--</span>
+    <button type="button" id="sizeUp" class="btn">⏩ 大きく</button>
   </div>
 
   <!-- 結果表示領域（常設） -->
@@ -214,6 +235,11 @@ body{
   const btnJudge  = document.getElementById('btnJudge');
   const btnReveal = document.getElementById('btnReveal');
   const btnNext   = document.getElementById('btnNext');
+
+  /* ▼ 牌サイズ ⏪/⏩ 用要素 */
+  const sizeDown  = document.getElementById('sizeDown');
+  const sizeUp    = document.getElementById('sizeUp');
+  const sizeLabel = document.getElementById('sizeLabel');
 
   let dora = {kind:'m', num:5};
 
@@ -313,7 +339,7 @@ body{
         if(pairs>best) best=pairs; return;
       }
       const t=pickFirstTile(c); if(!t) return;
-      if(c[t.k][t.n]>=3){ c[t.k][t.n]-=3; melds.push({type:'koutsu',k:t.k,n:t.n}); dfs(c, melds); melds.pop(); c[t.k][t.n]+=3; }
+      if(c[t.k][t.n]>=3){ c[t.k][t.n]-=3; if(dfs(c, melds)){ c[t.k][t.n]+=3; return; } c[t.k][t.n]+=3; }
       if(t.k!=='z' && t.n<=7 && c[t.k][t.n+1]>0 && c[t.k][t.n+2]>0){
         c[t.k][t.n]--; c[t.k][t.n+1]--; c[t.k][t.n+2]--;
         melds.push({type:'shuntsu',k:t.k,n:t.n}); dfs(c, melds); melds.pop();
@@ -544,15 +570,13 @@ body{
       }
       updateMeta(); renderHand13(); renderWin(); resetSelectors();
     }catch(e){
-    console.error(e);
-    document.getElementById('err').textContent='初期化中にエラー: '+e.message;
-    forceFallback(); renderHand13(); renderWin(); updateMeta();
+      console.error(e);
+      document.getElementById('err').textContent='初期化中にエラー: '+e.message;
+      forceFallback(); renderHand13(); renderWin(); updateMeta();
+    }
+    document.querySelectorAll('.scoreTable td.picked')
+            .forEach(td => td.classList.remove('picked'));
   }
-  document.querySelectorAll('.scoreTable td.picked')
-          .forEach(td => td.classList.remove('picked'));
-} 
-
-
 
   /* 判定：OK／惜しい／不正解（クラス切替） */
   function judge(){
@@ -659,15 +683,11 @@ body{
       const thFu=document.createElement('th'); thFu.className='fu'; thFu.textContent=FU_ROWS[r]; tr.appendChild(thFu);
       for(let c=0;c<HAN_HEAD.length;c++){
         const td=document.createElement('td'); td.textContent = bodyData[r][c];
-
-td.addEventListener('click', (e) => {
-  // すべての表の選択をクリア（子・親共通で“1つだけ”）
-  document.querySelectorAll('.scoreTable td.picked')
-          .forEach(x => x.classList.remove('picked'));
-  // クリックしたセルだけ選択
-  e.currentTarget.classList.add('picked');
-});
-
+        td.addEventListener('click', (e) => {
+          document.querySelectorAll('.scoreTable td.picked')
+                  .forEach(x => x.classList.remove('picked'));
+          e.currentTarget.classList.add('picked');
+        });
         tr.appendChild(td);
       }
       table.appendChild(tr);
@@ -683,11 +703,34 @@ td.addEventListener('click', (e) => {
     scoreTablesHost.appendChild(buildTable('親の点数','parent',PARENT));
   })();
 
-  // 初回
+  /* ===== 牌サイズ（⏪/⏩）：20–80px／5px刻み ===== */
+  const SIZE_MIN=20, SIZE_MAX=80, SIZE_STEP=5;
+  const LS_SIZE_KEY = 'tileSizePx_hufan';
+  let sizePx = +(localStorage.getItem(LS_SIZE_KEY) || 44);
+
+  function clamp(v,min,max){ return v<min?min:v>max?max:v; }
+  function applySize(px){
+    sizePx = clamp(px, SIZE_MIN, SIZE_MAX);
+    document.documentElement.style.setProperty('--w', sizePx + 'px');
+    document.documentElement.style.setProperty('--h', Math.round(sizePx * 1.45) + 'px');
+    if(sizeLabel) sizeLabel.textContent = sizePx + 'px';
+    try{ localStorage.setItem(LS_SIZE_KEY, String(sizePx)); }catch(_){}
+  }
+  function hookSizeButtons(){
+    if(sizeDown && !sizeDown.__bound){ sizeDown.addEventListener('click', ()=> applySize(sizePx - SIZE_STEP)); sizeDown.__bound = true; }
+    if(sizeUp   && !sizeUp.__bound  ){ sizeUp  .addEventListener('click', ()=> applySize(sizePx + SIZE_STEP)); sizeUp  .__bound = true; }
+  }
+
+  /* 初回：サイズ反映 → ボタン結線 → 問題生成 */
+  function boot(){
+    applySize(sizePx);
+    hookSizeButtons();
+    next();
+  }
   if(document.readyState==='loading'){
-    document.addEventListener('DOMContentLoaded', ()=>{ try{ next(); }catch(e){ console.error(e); } });
+    document.addEventListener('DOMContentLoaded', () => { try{ boot(); }catch(e){ console.error(e); } });
   }else{
-    try{ next(); }catch(e){ console.error(e); }
+    try{ boot(); }catch(e){ console.error(e); }
   }
 })();
 </script>

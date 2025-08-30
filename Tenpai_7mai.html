@@ -9,6 +9,7 @@
   *{ box-sizing: border-box; }
   body{ font-family: system-ui, -apple-system, "Segoe UI", sans-serif; margin:12px; text-align:center; }
   h2{ font-size: clamp(16px, 4.5vw, 22px); margin: 0.2em 0 0.6em; }
+
   .board{
     display:flex; justify-content:center; flex-wrap:wrap; gap:6px; margin: 0.6em;
     background:#0b6623; /* 緑ラシャ */
@@ -32,56 +33,45 @@
 
   button{ padding:10px 14px; border-radius:12px; border:1px solid #777; background:#f7f7f7; font-weight:800; font-size:clamp(14px,3.4vw,16px); }
   #streakRow button{ font-size: clamp(14px, 4vw, 18px); padding: 8px 14px; }
-  #result{ margin: .8rem 0; font-weight:800; }
+
   .controls{ display:flex; gap:12px; align-items:center; justify-content:center; flex-wrap:wrap; margin:6px 0 2px; font-size:clamp(12px,3.2vw,14px); }
-
-  .ud .tile{ border-color:#000; box-shadow:none; }
-  .ud .choices .selected{ outline-width:4px; }
-  .ud button{ border-color:#000; }
-
+  .btnRow{ display:flex; gap:14px; justify-content:center; flex-wrap:wrap; align-items:center; }
+  .timer{ font-weight:800; min-width: 6ch; display:inline-block; }
   #err{ color:#d32f2f; font-weight:700; font-size:12px; margin-top:6px; }
   #streakRow{ font-size: clamp(14px, 4vw, 18px); display:flex; gap:10px; align-items:center; justify-content:center; flex-wrap:wrap; }
   #streakRow strong{ font-size: 1.1em; }
-  .btnRow{ display:flex; gap:14px; justify-content:center; flex-wrap:wrap; align-items:center; }
-  .timer{ font-weight:800; min-width: 6ch; display:inline-block; }
 
-#result{
-  margin: .6rem 0 .2rem;
-  font-weight: 800;
-  font-size: clamp(16px, 4.2vw, 18px);
-}
+  /* 結果表示スロット（固定してレイアウトの揺れを防止） */
+  .resultSlot{
+    min-height: clamp(36px, 5.4vw, 64px);
+    display:flex; align-items:center; justify-content:center;
+    margin:.6rem 0 .2rem; padding:4px 8px;
+  }
+  #result{
+    margin:0;
+    font-weight:800;
+    font-size: clamp(16px, 4.2vw, 18px);
+  }
+  #result:empty::before{ content:" "; white-space:pre; }
+  #result.ok{ color:#0a7d3a; }  /* 正解色 */
+  #result.ng{ color:#b7152b; }  /* 不正解色 */
 
-/* --- 結果表示のための固定スロット --- */
-.resultSlot{
-  /* 1行～2行分くらいの高さを常時確保（画面幅に合わせて少し可変） */
-  min-height: clamp(36px, 5.4vw, 64px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: .6rem 0 .2rem;
-  padding: 4px 8px;
-}
-
-/* #result が空でも高さが潰れないようにする保険 */
-#result:empty::before{
-  content: " ";
-  white-space: pre;
-}
-
-/* （任意）見やすさ強化：正解/不正解の色 */
-#result.ok{ color:#0a7d3a; font-weight:800; }
-#result.ng{ color:#b7152b; font-weight:800; }
-
-
+  /* サイズ ⏪/⏩ ボタン */
+  .sizeControls{ display:inline-flex; gap:.4rem; align-items:center; margin-right:1rem; }
+  .sizeControls .nudge{
+    border:1px solid #bbb; border-radius:8px; padding:.25rem .6rem; background:#fff; cursor:pointer;
+    font-weight:800;
+  }
+  .sizeControls .nudge:hover{ background:#f5f5f5; }
+  #sizeLabel{ display:inline-block; min-width:64px; text-align:center; font-variant-numeric:tabular-nums; font-weight:800; }
 </style>
 </head>
 <body>
   <h2><strong>テンパイ何待ち7枚版（＋スピードモード）</strong></h2>
-  <div id="problem" class="board" aria-label="問題の手牌（7枚）"></div>
 
+  <div id="problem" class="board" aria-label="問題の手牌（7枚）"></div>
   <div id="choices" class="choices" aria-label="解答候補（1〜9萬）"></div>
 
-  <!-- 連続正解 表示行 -->
   <!-- 操作ボタン列 -->
   <div class="btnRow">
     <button type="button" id="btnReveal">答えを表示</button>
@@ -90,20 +80,25 @@
     <span id="timer" class="timer" aria-live="polite"></span>
   </div>
 
-<!-- 操作ボタン列のすぐ下に置く -->
-<div class="resultSlot">
-  <div id="result" role="status" aria-live="polite"></div>
-</div>
+  <!-- 結果（固定スロット内） -->
+  <div class="resultSlot">
+    <div id="result" role="status" aria-live="polite"></div>
+  </div>
 
-  <div id="result" aria-live="polite"></div>
-
+  <!-- 連続正解 表示行 -->
   <div id="streakRow">
     <span>連続正解数：<strong><span id="streakNow">0</span></strong>回 (最高 <strong><span id="streakBest">0</span></strong>回)</span>
     <button type="button" id="streakReset">正解数リセット</button>
   </div>
 
+  <!-- 各種設定 -->
   <div class="controls">
-    <label>サイズ: <input id="sizeRange" type="range" min="36" max="80" step="1" value="0"> <span id="sizeLabel">自動</span></label>
+    <div class="sizeControls">
+      サイズ：
+      <button type="button" id="sizeDown" class="nudge" aria-label="小さく">⏪️</button>
+      <span id="sizeLabel" aria-live="polite">--</span>
+      <button type="button" id="sizeUp" class="nudge" aria-label="大きく">⏩️</button>
+    </div>
     <label><input id="udToggle" type="checkbox"> UDモード（高コントラスト）</label>
     <label><input id="speedToggle" type="checkbox"> スピードモード（固定10秒）</label>
   </div>
@@ -120,14 +115,19 @@
   const problemEl = document.getElementById('problem');
   const choicesEl = document.getElementById('choices');
   const resultEl  = document.getElementById('result');
+
   const btnAnswer = document.getElementById('btnAnswer');
   const btnReveal = document.getElementById('btnReveal');
   const btnNext   = document.getElementById('btnNext');
-  const sizeRange = document.getElementById('sizeRange');
+
+  const sizeDown  = document.getElementById('sizeDown');
+  const sizeUp    = document.getElementById('sizeUp');
   const sizeLabel = document.getElementById('sizeLabel');
+
   const udToggle  = document.getElementById('udToggle');
   const speedToggle = document.getElementById('speedToggle');
   const timerEl   = document.getElementById('timer');
+
   const streakNowEl  = document.getElementById('streakNow');
   const streakBestEl = document.getElementById('streakBest');
   const streakResetBtn = document.getElementById('streakReset');
@@ -174,7 +174,7 @@
     streakResetBtn.addEventListener('click', ()=>{
       streak = 0; bestStreak = 0;
       saveStreak(); renderStreak();
-      resultEl.textContent = '連続正解数をリセットしました';
+      resultEl.className=''; resultEl.textContent = '連続正解数をリセットしました';
     });
   }
 
@@ -216,8 +216,6 @@
     }
     return false;
   }
-
-  // 8枚形の通常和了（2メンツ+雀頭）※チートイツ除外
   function isAgari8Std(cnt){
     if(sum(cnt)!==8) return false;
     for(let j=1;j<=9;j++){
@@ -230,8 +228,6 @@
     }
     return false;
   }
-
-  // 禁止形（嵌張・辺張）を使わずに和了できるか？
   function agari8StdWithoutBanned(c7, t){
     const c8 = clone(c7); c8[t]++;
     if(sum(c8)!==8) return false;
@@ -239,11 +235,9 @@
 
     function dfs(cnt){
       let i=1; while(i<=9 && cnt[i]===0) i++; if(i>9) return true;
-      // 刻子
       if(cnt[i]>=3){
         cnt[i]-=3; if(dfs(cnt)){ cnt[i]+=3; return true; } cnt[i]+=3;
       }
-      // 順子（嵌張・辺張の t 使用は禁止）
       if(i<=7 && cnt[i+1]>0 && cnt[i+2]>0){
         const useT = (i===t-1 || i+1===t || i+2===t);
         const banned = (i+1===t) || (t===3 && i===1) || (t===7 && i===7);
@@ -267,13 +261,11 @@
     }
     return false;
   }
-
   function waitsFor7(c7){
     const w=new Set();
     if(sum(c7)!==7) return w;
     for(let t=1;t<=9;t++){
       if(c7[t]===4) continue; // 山切れ
-      // チートイツ（四対子）は一切認めない、禁止待ち（嵌張・辺張）も除外
       if(agari8StdWithoutBanned(c7, t)) w.add(t);
     }
     return w;
@@ -297,9 +289,9 @@
   }
   function makeProblem(){
     const agari = randAgari8();
-    if(!agari){ // フォールバック
+    if(!agari){
       const fb = Array(10).fill(0);
-      fb[2]=2; fb[3]=1; fb[4]=2; fb[6]=2; // 合計7
+      fb[2]=2; fb[3]=1; fb[4]=2; fb[6]=2;
       problemCounts=fb; waits=waitsFor7(problemCounts.slice());
       if(waits.size<=1) return makeProblem();
       return;
@@ -308,7 +300,7 @@
     agari[idx]--; // 7枚に
     problemCounts=agari;
     waits=waitsFor7(problemCounts.slice());
-    if(waits.size<=1) return makeProblem(); // 0 or 1枚待ちはスキップ
+    if(waits.size<=1) return makeProblem();
   }
 
   // ===== 判定 =====
@@ -317,12 +309,14 @@
     const pick=[...selected].sort((a,b)=>a-b).join(',');
     const ans=[...waits].sort((a,b)=>a-b).join(',');
     if(pick===ans){
+      resultEl.className='ok';
       resultEl.textContent='🟢 完全正解！';
       streak++; if(streak>bestStreak) bestStreak=streak;
     } else {
       const chosen=[...selected]; const w=[...waits];
       const wrong = chosen.filter(n=>!waits.has(n));
       const missed = w.filter(n=>!selected.has(n));
+      resultEl.className='ng';
       resultEl.textContent = `❌ 不正解 誤選択:${wrong.join(',')||'なし'} / 見逃し:${missed.join(',')||'なし'}`;
       streak = 0;
     }
@@ -344,7 +338,7 @@
       timeLeft -= 1;
       if(timeLeft<=0){
         clearInterval(timerId); timerId=null;
-        if(selected.size===0){ resultEl.textContent = '⌛ タイムアップ！'; }
+        if(selected.size===0){ resultEl.className=''; resultEl.textContent = '⌛ タイムアップ！'; }
         judge();
       } else {
         timerEl.textContent = `残り ${timeLeft}秒`;
@@ -354,30 +348,56 @@
 
   // ===== 次の問題 =====
   function next(){
-    selected.clear(); resultEl.textContent=''; errEl.textContent='';
+    selected.clear(); resultEl.className=''; resultEl.textContent=''; errEl.textContent='';
     makeProblem(); renderHand(); renderChoices();
-    // スピードモード中は答え表示ボタンを無効化
     if(speedMode){ btnReveal.disabled = true; startTimer(); } else { btnReveal.disabled = false; timerEl.textContent=''; }
   }
 
-  // ===== サイズ＆UD =====
-  function applySize(pxOrAuto){
-    if(pxOrAuto==='auto'){ document.documentElement.style.setProperty('--w','clamp(44px, 10vw, 64px)'); sizeLabel.textContent='自動'; }
-    else{ document.documentElement.style.setProperty('--w', pxOrAuto+'px'); sizeLabel.textContent=pxOrAuto+'px'; }
-    document.documentElement.style.setProperty('--h','calc(var(--w) * 1.45)');
+  // ===== サイズ（⏪/⏩）＆ UD =====
+  const SIZE_MIN=20, SIZE_MAX=80, SIZE_STEP=5;
+  let sizePx = +(localStorage.getItem('tileSizePx') || 40);
+  function clamp(v,min,max){ return v<min?min:v>max?max:v; }
+  function applySize(px){
+    sizePx = clamp(px, SIZE_MIN, SIZE_MAX);
+    document.documentElement.style.setProperty('--w', sizePx + 'px');
+    document.documentElement.style.setProperty('--h', Math.round(sizePx * 1.45) + 'px');
+    sizeLabel.textContent = sizePx + 'px';
+    try{ localStorage.setItem('tileSizePx', String(sizePx)); }catch(_){}
   }
-  sizeRange.addEventListener('input', ()=>{ const v=sizeRange.valueAsNumber||0; if(v<=0) applySize('auto'); else applySize(v); });
-  udToggle.addEventListener('change', ()=>{ document.body.classList.toggle('ud', udToggle.checked); });
-  speedToggle.addEventListener('change', ()=>{ speedMode = speedToggle.checked; next(); });
 
   // ===== ボタン / キー =====
   btnAnswer.addEventListener('click', judge);
-  btnReveal.addEventListener('click', ()=>{ resultEl.textContent = '正解: ' + [...waits].sort((a,b)=>a-b).map(n=>NUMS[n-1]+'萬').join(' '); });
+  btnReveal.addEventListener('click', ()=>{
+    resultEl.className='';
+    resultEl.textContent = '正解: ' + [...waits].sort((a,b)=>a-b).map(n=>NUMS[n-1]+'萬').join(' ');
+  });
   btnNext.addEventListener('click', next);
   window.addEventListener('keydown', (e)=>{ if(e.key==='Enter') judge(); if(e.key.toLowerCase()==='n') next(); });
 
+  // サイズ調整ボタン
+  sizeDown.addEventListener('click', ()=> applySize(sizePx - SIZE_STEP));
+  sizeUp  .addEventListener('click', ()=> applySize(sizePx + SIZE_STEP));
+
+  // UD / スピード
+  udToggle.addEventListener('change', ()=>{ document.body.classList.toggle('ud', udToggle.checked); });
+  speedToggle.addEventListener('change', ()=>{
+    speedMode = speedToggle.checked;
+    next();
+  });
+
   // ===== 初期化 =====
-  loadStreak(); renderStreak(); applySize('auto'); next();
+  function init(){
+    loadStreak(); renderStreak();
+    document.body.classList.toggle('ud', udToggle.checked);
+    speedMode = !!speedToggle.checked;
+    applySize(sizePx);
+    next();
+  }
+  if (document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
 })();
 </script>
 </body>
