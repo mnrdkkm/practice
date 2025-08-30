@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>和了役を計算しようー</title>
+<title>役判定クイズ（和了形→成立役を答える）</title>
 <style>
   :root{ --w: clamp(44px, 8.2vw, 64px); --h: calc(var(--w) * 1.45); }
   *{ box-sizing: border-box; }
@@ -19,9 +19,15 @@
   /* 牌 */
   .handRow{ display:flex; justify-content:center; align-items:center; gap:18px; margin:6px 0 8px; }
   .board{ display:flex; justify-content:center; flex-wrap:wrap; gap:6px; background:#0b6623; padding:10px; border-radius:10px; min-height: calc(var(--h) + 20px); }
-  .winWrap{ position:relative; display:flex; align-items:center; writing-mode: horizontal-tb;  text-orientation: mixed;}
+  .winWrap{ position:relative; display:flex; align-items:center; }
   .winTile{ position:relative; }
-  .winLabel{ position:absolute; top:-35px; left:50%; transform:translateX(-50%); font-weight:800; font-size:14px; background:#fff; border:1px solid #bbb; border-radius:999px; padding:6px 23px; white-space: nowrap; }
+  .winLabel{
+    position:absolute; top:-10px; left:50%; transform:translateX(-50%);
+    font-weight:800; font-size:12px; background:#fff; border:1px solid #bbb; border-radius:999px; padding:2px 6px;
+    /* ← 折返し防止・横書き固定 */
+    white-space: nowrap; writing-mode: horizontal-tb; text-orientation: mixed;
+    display:inline-flex; align-items:center; justify-content:center; min-width:max-content;
+  }
   .spacer{ width:14px; height:2px; background:linear-gradient(90deg, transparent 0 30%, #0b6623 30% 70%, transparent 70% 100%); border-radius:2px; }
 
   .tile{ width:var(--w); height:var(--h); border:2px solid #8a8a8a; border-radius:6px; background:#fff;
@@ -41,50 +47,47 @@
   .controlRow select{ padding:8px 10px; border-radius:10px; border:1px solid #777; font-weight:700; }
 
   /* 結果エリア：常設（高さ確保） */
-  #resultPanel{
-    min-height: 5.6em;
-    display:flex; flex-direction:column; gap:.15rem;
-    align-items:center; justify-content:flex-start;
-    margin:.4rem 0 .6rem;
-  }
+  #resultPanel{ min-height: 5.6em; display:flex; flex-direction:column; gap:.15rem; align-items:center; justify-content:flex-start; margin:.4rem 0 .6rem; }
   /* 状態クラス（OK/惜しい/不正解） */
-  #result.ok   { color:#0a7d00; }     /* 緑 */
-  #result.near { color:#b08900; }     /* 琥珀 */
-  #result.bad  { color:#b00020; }     /* 赤 */
-  #result .mark{ color:#f6c000; font-weight:900; margin-right:.15em; } /* ▲の黄色 */
+  #result.ok   { color:#0a7d00; }
+  #result.near { color:#b08900; }
+  #result.bad  { color:#b00020; }
+  #result .mark{ color:#f6c000; font-weight:900; margin-right:.15em; }
 
   #yakuLine{ font-weight:700; }
   #fuLine{ color:#444; }
   #err{ color:#d32f2f; font-weight:700; font-size:12px; margin-top:6px; }
 
+  /* ▼ 役メモ / 点数表 切替タブ */
+  .switchTabs{display:flex;gap:8px;justify-content:center;margin:10px 0 6px}
+  .switchTabs .tab{ padding:8px 14px;border-radius:999px;border:1px solid #b6bfd6;background:#f6f7fb;font-weight:800;cursor:pointer }
+  .switchTabs .tab.active{background:#e7eeff;border-color:#7ea6ff}
+
   /* 役メモ */
   .memo{ margin:12px auto 8px; max-width:980px; text-align:left; }
   .memo h3{ font-size:14px; margin:.4rem 0; }
   .memo .headNote{ font-size:12px; color:#555; font-weight:700; margin-left:.4em; }
-  .yakuSection{
-    display:grid;
-    grid-template-columns: repeat(5, minmax(0,1fr));
-    gap:8px 10px;
-    align-items:start;
-    margin:8px 0 16px;
-  }
+  .yakuSection{ display:grid; grid-template-columns: repeat(5, minmax(0,1fr)); gap:8px 10px; align-items:start; margin:8px 0 16px; }
   .yakuSection h4{ grid-column:1 / -1; font-weight:800; margin:.2rem 0; }
-  .yakuBtn{
-    display:inline-block;
-    padding:6px 10px;
-    border-radius:999px;
-    background:#f6f7fa;
-    border:1px solid #d8deef;
-    font-weight:700;
-    font-size:13px;
-    white-space:nowrap;
-    cursor:pointer;
-  }
+  .yakuBtn{ display:inline-block; padding:6px 10px; border-radius:999px; background:#f6f7fa; border:1px solid #d8deef; font-weight:700; font-size:13px; white-space:nowrap; cursor:pointer; }
   .yakuBtn.selected{ background:#fff9db; border-color:#e6c85c; }
+
+  /* ▼ 点数表 */
+  .scoreWrap{display:flex;gap:18px;justify-content:center;flex-wrap:wrap}
+  .scoreCard{border:2px solid #d7dde8;border-radius:10px;overflow:hidden;background:#fff}
+  .scoreCard h4{ margin:0;padding:8px 14px;color:#fff;font-size:15px;letter-spacing:.06em }
+  .scoreCard.child h4{background:#ef6f6c}
+  .scoreCard.parent h4{background:#59a9ea}
+  .scoreTable{border-collapse:separate;border-spacing:0}
+  .scoreTable th,.scoreTable td{ border-right:1px solid #dfe5f0;border-bottom:1px solid #dfe5f0; padding:8px 10px;font-weight:800;text-align:center;min-width:74px }
+  .scoreTable th.head{background:#f0f2f8}
+  .scoreTable th.fu{background:#c7ebb9}
+  .scoreTable td.picked{background:#fff2b3 !important; box-shadow: inset 0 0 0 2px #e0c14e}
+  .scoreTable td:hover{background:#f9fbff}
 </style>
 </head>
 <body>
-  <h2>和了役を計算しようー</h2>
+  <h2>役判定クイズ（和了形 → 成立役を答える）</h2>
   <div id="meta" class="meta"></div>
 
   <div class="handRow">
@@ -113,36 +116,49 @@
     <div id="err" aria-live="polite"></div>
   </div>
 
-  <!-- 役メモ -->
-  <div class="memo" id="yakuMemo">
-    <h3>役一覧 <span class="headNote">（クリックでメモに使えます）</span></h3>
+  <!-- ▼ 役メモ / 点数表 切替タブ -->
+  <div class="switchTabs">
+    <button id="tabMemo"  class="tab active">役メモ</button>
+    <button id="tabScore" class="tab">点数表</button>
+  </div>
 
-    <div class="yakuSection">
-      <h4>一飜</h4>
-      <span class="yakuBtn">表ドラ</span><span class="yakuBtn">立直</span><span class="yakuBtn">門前清自摸和</span>
-      <span class="yakuBtn">断么九</span><span class="yakuBtn">平和</span><span class="yakuBtn">一盃口</span>
-      <span class="yakuBtn">役牌</span><span class="yakuBtn">場風牌</span><span class="yakuBtn">自風牌</span>
+  <!-- ▼ パネル：役メモ -->
+  <div id="panelMemo">
+    <div class="memo" id="yakuMemo">
+      <h3>役一覧 <span class="headNote">（クリックでメモに使えます）</span></h3>
+
+      <div class="yakuSection">
+        <h4>一飜</h4>
+        <span class="yakuBtn">表ドラ</span><span class="yakuBtn">立直</span><span class="yakuBtn">門前清自摸和</span>
+        <span class="yakuBtn">断么九</span><span class="yakuBtn">平和</span><span class="yakuBtn">一盃口</span>
+        <span class="yakuBtn">役牌</span><span class="yakuBtn">場風牌</span><span class="yakuBtn">自風牌</span>
+      </div>
+      <div class="yakuSection">
+        <h4>二飜</h4>
+        <span class="yakuBtn">三色同順</span><span class="yakuBtn">三色同刻</span><span class="yakuBtn">一気通貫</span>
+        <span class="yakuBtn">混全帯么九</span><span class="yakuBtn">七対子</span><span class="yakuBtn">対々和</span>
+        <span class="yakuBtn">三暗刻</span><span class="yakuBtn">混老頭</span><span class="yakuBtn">小三元</span>
+      </div>
+      <div class="yakuSection">
+        <h4>三飜</h4>
+        <span class="yakuBtn">混一色</span><span class="yakuBtn">純全帯么九</span><span class="yakuBtn">二盃口</span>
+      </div>
+      <div class="yakuSection">
+        <h4>六飜</h4>
+        <span class="yakuBtn">清一色</span>
+      </div>
+      <div class="yakuSection">
+        <h4>役満</h4>
+        <span class="yakuBtn">四暗刻</span><span class="yakuBtn">清老頭</span><span class="yakuBtn">緑一色</span>
+        <span class="yakuBtn">大三元</span><span class="yakuBtn">字一色</span><span class="yakuBtn">小四喜</span>
+        <span class="yakuBtn">大四喜</span><span class="yakuBtn">九蓮宝燈</span>
+      </div>
     </div>
-    <div class="yakuSection">
-      <h4>二飜</h4>
-      <span class="yakuBtn">三色同順</span><span class="yakuBtn">三色同刻</span><span class="yakuBtn">一気通貫</span>
-      <span class="yakuBtn">混全帯么九</span><span class="yakuBtn">七対子</span><span class="yakuBtn">対々和</span>
-      <span class="yakuBtn">三暗刻</span><span class="yakuBtn">混老頭</span><span class="yakuBtn">小三元</span>
-    </div>
-    <div class="yakuSection">
-      <h4>三飜</h4>
-      <span class="yakuBtn">混一色</span><span class="yakuBtn">純全帯么九</span><span class="yakuBtn">二盃口</span>
-    </div>
-    <div class="yakuSection">
-      <h4>六飜</h4>
-      <span class="yakuBtn">清一色</span>
-    </div>
-    <div class="yakuSection">
-      <h4>役満</h4>
-      <span class="yakuBtn">四暗刻</span><span class="yakuBtn">清老頭</span><span class="yakuBtn">緑一色</span>
-      <span class="yakuBtn">大三元</span><span class="yakuBtn">字一色</span><span class="yakuBtn">小四喜</span>
-      <span class="yakuBtn">大四喜</span><span class="yakuBtn">九蓮宝燈</span>
-    </div>
+  </div>
+
+  <!-- ▼ パネル：点数表（JSで生成） -->
+  <div id="panelScore" hidden>
+    <div class="scoreWrap" id="scoreTables"></div>
   </div>
 
 <script>
@@ -201,7 +217,11 @@
     ['m','p','s'].forEach(k=>{ for(let i=1;i<=9;i++) for(let t=0;t<counts[k][i];t++) hand13El.appendChild(tileNode(k,i)); });
     for(let i=1;i<=7;i++) for(let t=0;t<counts.z[i];t++) hand13El.appendChild(tileNode('z',i));
   }
-  function renderWin(){ winTileEl.innerHTML=''; winTileEl.appendChild(tileNode(draw.kind, draw.num)); winLabel.textContent = (winType==='tsumo'?'ツモ':'ロン'); }
+  function renderWin(){
+    winTileEl.innerHTML='';
+    winTileEl.appendChild(tileNode(draw.kind, draw.num));
+    winLabel.textContent = (winType==='tsumo'?'ツモ':'ロン');
+  }
 
   /* メタ：場風+自風+ドラ / 立直+和了 を1つずつにまとめる */
   function updateMeta(){
@@ -244,7 +264,12 @@
     const dfs=(c, melds)=>{
       if(melds.length===4){
         const cnt=new Map();
-        for(const m of melds){ if(m.type==='shuntsu'){ const key=`${m.k}:${m.n}`; cnt.set(key,(cnt.get(key)||0)+1); } }
+        for(const m of melds){
+          if(m.type==='shuntsu'){
+            const key=`${m.k}:${m.n}`;
+            cnt.set(key,(cnt.get(key)||0)+1);
+          }
+        }
         let pairs=0; for(const v of cnt.values()) pairs+=Math.floor(v/2);
         if(pairs>best) best=pairs; return;
       }
@@ -274,8 +299,12 @@
   function countsFromTiles(tiles){ const c={m:Array(10).fill(0),p:Array(10).fill(0),s:Array(10).fill(0),z:Array(8).fill(0)}; for(const t of tiles){ if(t.k==='z') c.z[t.n]++; else c[t.k][t.n]++; } return c; }
   function canMentsu(arr){ let i=1; while(i<=9 && arr[i]===0) i++; if(i>9) return true; if(arr[i]>=3){ arr[i]-=3; if(canMentsu(arr)){ arr[i]+=3; return true; } arr[i]+=3; } if(i<=7 && arr[i+1]>0 && arr[i+2]>0){ arr[i]--;arr[i+1]--;arr[i+2]--; if(canMentsu(arr)){ arr[i]++;arr[i+1]++;arr[i+2]++; return true; } arr[i]++;arr[i+1]++;arr[i+2]++; } return false; }
   function isAgariStd(full){
-    for(const k of ['m','p','s']) for(let j=1;j<=9;j++) if(full[k][j]>=2){ full[k][j]-=2; const ok=canMentsu(full.m.slice())&&canMentsu(full.p.slice())&&canMentsu(full.s.slice())&&[1,2,3,4,5,6,7].every(z=>full.z[z]%3===0); full[k][j]+=2; if(ok) return true; }
-    for(let j=1;j<=7;j++) if(full.z[j]>=2){ full.z[j]-=2; const ok=canMentsu(full.m.slice())&&canMentsu(full.p.slice())&&canMentsu(full.s.slice())&&[1,2,3,4,5,6,7].every(z=>full.z[z]%3===0); full.z[j]+=2; if(ok) return true; }
+    for(const k of ['m','p','s']) for(let j=1;j<=9;j++) if(full[k][j]>=2){ full[k][j]-=2;
+      const ok=canMentsu(full.m.slice())&&canMentsu(full.p.slice())&&canMentsu(full.s.slice())&&[1,2,3,4,5,6,7].every(z=>full.z[z]%3===0);
+      full[k][j]+=2; if(ok) return true; }
+    for(let j=1;j<=7;j++) if(full.z[j]>=2){ full.z[j]-=2;
+      const ok=canMentsu(full.m.slice())&&canMentsu(full.p.slice())&&canMentsu(full.s.slice())&&[1,2,3,4,5,6,7].every(z=>full.z[z]%3===0);
+      full.z[j]+=2; if(ok) return true; }
     return false;
   }
   function classifyWait(base13, draw){
@@ -352,6 +381,7 @@
     let hanYaku=0, doraHan=0;
     const yakuList=[];
 
+    if(isMenzen && winType==='ツモ'){ /* 保険 */ }
     if(isMenzen && winType==='tsumo'){ hanYaku++; yakuList.push('ツモ'); }
     if(isMenzen && isRiichi){ hanYaku++; yakuList.push('立直'); }
 
@@ -475,11 +505,15 @@
       }
       updateMeta(); renderHand13(); renderWin(); resetSelectors();
     }catch(e){
-      console.error(e);
-      document.getElementById('err').textContent='初期化中にエラー: '+e.message;
-      forceFallback(); renderHand13(); renderWin(); updateMeta();
-    }
+    console.error(e);
+    document.getElementById('err').textContent='初期化中にエラー: '+e.message;
+    forceFallback(); renderHand13(); renderWin(); updateMeta();
   }
+  document.querySelectorAll('.scoreTable td.picked')
+          .forEach(td => td.classList.remove('picked'));
+} 
+
+
 
   /* 判定：OK／惜しい／不正解（クラス切替） */
   function judge(){
@@ -515,7 +549,7 @@
 
   function reveal(){
     const resultEl = document.getElementById('result');
-    resultEl.className = ''; // 露出時は色を固定しない（必要ならok/near/badにしてもOK）
+    resultEl.className = '';
     resultEl.textContent = `正解: ${fuAns}符 / ${hanAns}翻`;
     document.getElementById('yakuLine').textContent = lastYakuList.length ? lastYakuList.join('／') : '（役なし）';
     document.getElementById('fuLine').textContent  = lastFuBreak.length ? lastFuBreak.join('／') : '';
@@ -533,6 +567,82 @@
       e.target.classList.toggle('selected');
     }
   });
+
+  // ====== 役メモ ↔ 点数表 切替 & 点数表生成 ======
+  const tabMemo  = document.getElementById('tabMemo');
+  const tabScore = document.getElementById('tabScore');
+  const panelMemo  = document.getElementById('panelMemo');
+  const panelScore = document.getElementById('panelScore');
+  const scoreTablesHost = document.getElementById('scoreTables');
+
+  tabMemo.addEventListener('click', () => {
+    tabMemo.classList.add('active'); tabScore.classList.remove('active');
+    panelMemo.hidden = false; panelScore.hidden = true;
+  });
+  tabScore.addEventListener('click', () => {
+    tabScore.classList.add('active'); tabMemo.classList.remove('active');
+    panelMemo.hidden = true; panelScore.hidden = false;
+  });
+
+  const FU_ROWS = ['20符','25符','30符','40符','50符','60符'];
+  const HAN_HEAD = ['1飜','2飜','3飜','4飜','5飜'];
+  const CHILD = [
+    ['----','400/700','700/1300','1300/2600','満貫'],
+    ['----','1600','3200','6400','満貫'],
+    ['1000','2000','3900','満貫','満貫'],
+    ['1300','2600','5200','満貫','満貫'],
+    ['1600','3200','6400','満貫','満貫'],
+    ['2000','3900','満貫','満貫','満貫'],
+  ];
+  const PARENT = [
+    ['----','700オール','1300オール','2600オール','4000オール'],
+    ['----','2400','4800','9600','満貫'],
+    ['1500','2900','5800','満貫','満貫'],
+    ['2000','3900','7700','満貫','満貫'],
+    ['2400','4800','9600','満貫','満貫'],
+    ['2900','5800','満貫','満貫','満貫'],
+  ];
+
+  function buildTable(title, kind, bodyData){
+    const card = document.createElement('div');
+    card.className = `scoreCard ${kind}`;
+    const h4 = document.createElement('h4'); h4.textContent = title; card.appendChild(h4);
+    const table = document.createElement('table'); table.className = 'scoreTable';
+
+    const trHead = document.createElement('tr');
+    const th0 = document.createElement('th'); th0.className='head'; th0.textContent='';
+    trHead.appendChild(th0);
+    HAN_HEAD.forEach(h => { const th = document.createElement('th'); th.className='head'; th.textContent=h; trHead.appendChild(th); });
+    table.appendChild(trHead);
+
+    for(let r=0;r<FU_ROWS.length;r++){
+      const tr=document.createElement('tr');
+      const thFu=document.createElement('th'); thFu.className='fu'; thFu.textContent=FU_ROWS[r]; tr.appendChild(thFu);
+      for(let c=0;c<HAN_HEAD.length;c++){
+        const td=document.createElement('td'); td.textContent = bodyData[r][c];
+
+td.addEventListener('click', (e) => {
+  // すべての表の選択をクリア（子・親共通で“1つだけ”）
+  document.querySelectorAll('.scoreTable td.picked')
+          .forEach(x => x.classList.remove('picked'));
+  // クリックしたセルだけ選択
+  e.currentTarget.classList.add('picked');
+});
+
+        tr.appendChild(td);
+      }
+      table.appendChild(tr);
+    }
+    card.appendChild(table);
+    return card;
+  }
+
+  (function initScoreTables(){
+    if(!scoreTablesHost) return;
+    scoreTablesHost.innerHTML='';
+    scoreTablesHost.appendChild(buildTable('子の点数','child',CHILD));
+    scoreTablesHost.appendChild(buildTable('親の点数','parent',PARENT));
+  })();
 
   // 初回
   if(document.readyState==='loading'){
