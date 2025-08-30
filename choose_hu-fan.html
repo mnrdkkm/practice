@@ -53,7 +53,6 @@
 
   /* 結果エリア：常設（高さ確保） */
   #resultPanel{ min-height: 6.8em; display:flex; flex-direction:column; gap:.15rem; align-items:center; justify-content:flex-start; margin:.4rem 0 .6rem; }
-  /* 状態クラス（OK/惜しい/不正解） */
   #result.ok   { color:#0a7d00; }
   #result.near { color:#b08900; }
   #result.bad  { color:#b00020; }
@@ -61,7 +60,7 @@
 
   #yakuLine{ font-weight:700; }
   #fuLine{ color:#444; }
-  .note{ color:#666; font-size:12px; font-weight:700; } /* ← 注記表示 */
+  .note{ color:#666; font-size:12px; font-weight:700; }
 
   #err{ color:#d32f2f; font-weight:700; font-size:12px; margin-top:6px; }
 
@@ -143,7 +142,7 @@
     <div id="result" aria-live="polite"></div>
     <div id="yakuLine" aria-live="polite"></div>
     <div id="fuLine" aria-live="polite"></div>
-    <div id="noteLine" class="note" aria-live="polite"></div><!-- ← 注記をここに出す -->
+    <div id="noteLine" class="note" aria-live="polite"></div>
     <div id="err" aria-live="polite"></div>
   </div>
 
@@ -290,36 +289,30 @@
     meta.appendChild(statusBox);
   }
 
-  /* 一盃口/二盃口 厳密判定ユーティリティ */
-  function cloneCounts(c){ return { m:c.m.slice(), p:c.p.slice(), s:c.s.slice(), z:c.z.slice() }; }
-  function maxIipeikouPairs(fullCounts){
-    let best = 0;
-    const pairChoices = [];
-    for(const k of ['m','p','s']) for(let n=1;n<=9;n++) if(fullCounts[k][n]>=2) pairChoices.push({k,n});
-    for(let n=1;n<=7;n++) if(fullCounts.z[n]>=2) pairChoices.push({k:'z',n});
-
-    const pickFirstTile=(c)=>{ for(const k of ['m','p','s','z']){ const maxN=(k==='z'?7:9); for(let n=1;n<=maxN;n++) if(c[k][n]>0) return {k,n}; } return null; };
-    const dfs=(c, melds)=>{
-      if(melds.length===4){
-        const cnt=new Map();
-        for(const m of melds){ if(m.type==='shuntsu'){ const key=`${m.k}:${m.n}`; cnt.set(key,(cnt.get(key)||0)+1); } }
-        let pairs=0; for(const v of cnt.values()) pairs+=Math.floor(v/2);
-        if(pairs>best) best=pairs; return;
+  /* === 一盃口 / 二盃口：厳密カウント ==========================
+     各色ごとに「2枚ずつの同一順子( i,i+1,i+2 )」を
+     どれだけ作れるかを最適化して合計する。                 */
+  function maxPairsInSuit(cnt) {
+    const a = cnt.slice(); // 破壊しないようコピー
+    function dfs(i) {
+      if (i > 7) return 0;
+      let best = 0;
+      const m2 = Math.floor(Math.min(a[i], a[i+1], a[i+2]) / 2);
+      for (let use = m2; use >= 0; use--) {
+        if (use) { a[i] -= 2*use; a[i+1] -= 2*use; a[i+2] -= 2*use; }
+        best = Math.max(best, use + dfs(i+1));
+        if (use) { a[i] += 2*use; a[i+1] += 2*use; a[i+2] += 2*use; }
       }
-      const t=pickFirstTile(c); if(!t) return;
-      if(c[t.k][t.n]>=3){ c[t.k][t.n]-=3; if(dfs(c, melds)){ c[t.k][t.n]+=3; return; } c[t.k][t.n]+=3; }
-      if(t.k!=='z' && t.n<=7 && c[t.k][t.n+1]>0 && c[t.k][t.n+2]>0){
-        c[t.k][t.n]--; c[t.k][t.n+1]--; c[t.k][t.n+2]--;
-        melds.push({type:'shuntsu',k:t.k,n:t.n}); dfs(c, melds); melds.pop();
-        c[t.k][t.n]++; c[t.k][t.n+1]++; c[t.k][t.n+2]++;
-      }
-    };
-    for(const head of pairChoices){
-      const c=cloneCounts(fullCounts);
-      c[head.k][head.n]-=2;
-      dfs(c, []); if(best===2) break;
+      return best;
     }
-    return best;
+    return dfs(1);
+  }
+  function maxPeikouPairs(fullCounts){
+    return (
+      maxPairsInSuit(fullCounts.m) +
+      maxPairsInSuit(fullCounts.p) +
+      maxPairsInSuit(fullCounts.s)
+    );
   }
 
   /* 面子プール・判定補助 */
@@ -449,7 +442,7 @@
     if(isMenzen){
       const fullCounts = JSON.parse(JSON.stringify(base13Counts));
       if(draw.kind==='z') fullCounts.z[draw.num]++; else fullCounts[draw.kind][draw.num]++;
-      const pairs = maxIipeikouPairs(fullCounts);
+      const pairs = maxPeikouPairs(fullCounts);   // ← 新ロジック
       if(pairs>=2){ hanYaku+=3; yakuList.push('二盃口'); }
       else if(pairs===1){ hanYaku+=1; yakuList.push('一盃口'); }
     }
@@ -492,7 +485,7 @@
     else if(wType==='penchan'){ fu+=2; fuBreak.push('ペンチャン(2)'); }
     else if(wType==='tanki'){ fu+=2; fuBreak.push('単騎(2)'); }
 
-    if(pinfu){ fu = (winType==='tsumo')?20:30; lastFuBreak=[winType==='tsumo'?'平和ツモ(20)':'平和ロン(30)']; }
+    if(pinfu){ fu = (winType==='tsumo')?20:30; lastFuBreak=[winType==='ツモ'?'平和ツモ(20)':'平和ロン(30)']; }
     else{
       if(winType==='tsumo'){ fu+=2; fuBreak.push('ツモ(2)'); }
       else if(winType==='ron' && isMenzen){ fu+=10; fuBreak.push('門前ロン(10)'); }
@@ -538,7 +531,6 @@
       }
       updateMeta(); renderHand13(); renderWin(); resetSelectors();
 
-      // ← 5翻以上なら注記を常設表示
       if (hanAns >= 5){
         noteEl.textContent = '※５翻以上のときは符の入力無しでOK！';
       }
@@ -558,7 +550,6 @@
     const resultEl = document.getElementById('result');
     const noteEl   = document.getElementById('noteLine');
 
-    // 5翻以上のとき：翻のみ必須
     if (hanAns >= 5){
       if (Number.isNaN(hv)){
         resultEl.className = 'bad';
@@ -568,7 +559,7 @@
       const hanOK = (hv === hanAns);
       if (hanOK){
         resultEl.className = 'ok';
-        resultEl.textContent = `🟢 正解！（${fuAns}符 / ${hanAns}翻）`; // 符は表示だけ
+        resultEl.textContent = `🟢 正解！（${fuAns}符 / ${hanAns}翻）`;
       }else{
         resultEl.className = 'bad';
         resultEl.textContent = `❌ 不正解 → 正解は ${fuAns}符 / ${hanAns}翻`;
@@ -581,7 +572,6 @@
       return;
     }
 
-    // 〜4翻までは従来どおり：符も翻も採点
     if(Number.isNaN(fv) || Number.isNaN(hv)){
       resultEl.className = 'bad';
       resultEl.textContent = 'まず「何符」「何翻」を選んでください。';
