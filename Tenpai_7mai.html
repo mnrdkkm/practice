@@ -7,8 +7,33 @@
 <style>
   :root{ --w: clamp(44px, 10vw, 64px); --h: calc(var(--w) * 1.45); }
   *{ box-sizing: border-box; }
-  body{ font-family: system-ui, -apple-system, "Segoe UI", sans-serif; margin:12px; text-align:center; }
-  h2{ font-size: clamp(16px, 4.5vw, 22px); margin: 0.2em 0 0.6em; }
+  body{ font-family: system-ui, -apple-system, "Segoe UI", sans-serif; margin:12px; text-align:center; color:#111; }
+  h2{ font-size: clamp(16px, 4.5vw, 22px); margin: 0; }
+
+  /* タイトル＋スイッチ行 */
+  .titleRow{
+    display:flex; gap:14px; align-items:center; justify-content:center; flex-wrap:wrap;
+    margin: .2em 0 .6em;
+  }
+
+  /* スピードモード・スイッチ */
+  .switch{
+    display:inline-flex; align-items:center; gap:10px; cursor:pointer; user-select:none;
+    font-weight:800; font-size: clamp(13px, 3.6vw, 15px);
+  }
+  .switch input{ display:none; }
+  .slider{
+    position:relative; width:48px; height:28px; border-radius:999px; background:#d7dbe3; transition:background .18s ease;
+    box-shadow: inset 0 1px 2px #0001;
+  }
+  .slider::after{
+    content:""; position:absolute; top:3px; left:3px; width:22px; height:22px; border-radius:50%;
+    background:#fff; box-shadow:0 1px 4px #0003; transition:left .18s ease;
+  }
+  .switch input:checked + .slider{ background:#4dabf7; }
+  .switch input:checked + .slider::after{ left:23px; }
+  .switch .label{ font-weight:900; }
+  .switch .sub{ font-weight:700; opacity:.7; font-size:.92em; }
 
   .board{
     display:flex; justify-content:center; flex-wrap:wrap; gap:6px; margin: 0.6em;
@@ -67,7 +92,17 @@
 </style>
 </head>
 <body>
-  <h2><strong>テンパイ何待ち7枚版（＋スピードモード）</strong></h2>
+
+  <!-- タイトル＋スイッチ -->
+  <div class="titleRow">
+    <h2><strong>テンパイ何待ち7枚版</strong></h2>
+    <label class="switch" title="10秒で自動判定（答え表示は不可）">
+      <input type="checkbox" id="speedToggle">
+      <span class="slider" aria-hidden="true"></span>
+      <span class="label">スピード</span>
+      <span class="sub">(10秒)</span>
+    </label>
+  </div>
 
   <div id="problem" class="board" aria-label="問題の手牌（7枚）"></div>
   <div id="choices" class="choices" aria-label="解答候補（1〜9萬）"></div>
@@ -91,7 +126,7 @@
     <button type="button" id="streakReset">正解数リセット</button>
   </div>
 
-  <!-- 各種設定 -->
+  <!-- 各種設定（UD／サイズ） -->
   <div class="controls">
     <div class="sizeControls">
       サイズ：
@@ -100,7 +135,6 @@
       <button type="button" id="sizeUp" class="nudge" aria-label="大きく">⏩️</button>
     </div>
     <label><input id="udToggle" type="checkbox"> UDモード（高コントラスト）</label>
-    <label><input id="speedToggle" type="checkbox"> スピードモード（固定10秒）</label>
   </div>
 
   <div id="err" aria-live="polite"></div>
@@ -140,7 +174,8 @@
   let selected = new Set();
 
   // スピードモード
-  let speedMode = false;
+  const LS_SPEED = 'speedMode7';
+  let speedMode = (localStorage.getItem(LS_SPEED) === '1');
   const timeLimit = 10; // 固定
   let timeLeft = 0;
   let timerId = null;
@@ -328,30 +363,38 @@
     if(speedMode){ setTimeout(next, pick===ans ? 800 : 1500); }
   }
 
+// ---- タイマーを安全に止める & 表示を消す ----
+function stopTimer(){
+  if(timerId){ clearInterval(timerId); timerId = null; }
+  timerEl.textContent = '';
+}
+
   // ===== タイマー =====
-  function startTimer(){
-    if(!speedMode){ timerEl.textContent=''; return; }
-    if(timerId){ clearInterval(timerId); timerId=null; }
-    timeLeft = timeLimit;
-    timerEl.textContent = `残り ${timeLeft}秒`;
-    timerId = setInterval(()=>{
-      timeLeft -= 1;
-      if(timeLeft<=0){
-        clearInterval(timerId); timerId=null;
-        if(selected.size===0){ resultEl.className=''; resultEl.textContent = '⌛ タイムアップ！'; }
-        judge();
-      } else {
-        timerEl.textContent = `残り ${timeLeft}秒`;
-      }
-    }, 1000);
-  }
+function startTimer(){
+  if(!speedMode){ timerEl.textContent=''; return; }
+  stopTimer();                    // ← 追加：重複起動を防ぐ
+  timeLeft = timeLimit;
+  timerEl.textContent = `残り ${timeLeft}秒`;
+  timerId = setInterval(()=>{
+    timeLeft -= 1;
+    if(timeLeft<=0){
+      clearInterval(timerId); timerId=null;
+      if(selected.size===0){ resultEl.className=''; resultEl.textContent = '⌛ タイムアップ！'; }
+      judge();
+    } else {
+      timerEl.textContent = `残り ${timeLeft}秒`;
+    }
+  }, 1000);
+}
 
   // ===== 次の問題 =====
-  function next(){
-    selected.clear(); resultEl.className=''; resultEl.textContent=''; errEl.textContent='';
-    makeProblem(); renderHand(); renderChoices();
-    if(speedMode){ btnReveal.disabled = true; startTimer(); } else { btnReveal.disabled = false; timerEl.textContent=''; }
-  }
+function next(){
+  selected.clear(); resultEl.className=''; resultEl.textContent=''; errEl.textContent='';
+  stopTimer();                     // ← 追加：前のタイマーを確実に停止
+  makeProblem(); renderHand(); renderChoices();
+  if(speedMode){ btnReveal.disabled = true; startTimer(); }
+  else{ btnReveal.disabled = false; /* timerEl は stopTimer() 済み */ }
+}
 
   // ===== サイズ（⏪/⏩）＆ UD =====
   const SIZE_MIN=20, SIZE_MAX=80, SIZE_STEP=5;
@@ -378,18 +421,35 @@
   sizeDown.addEventListener('click', ()=> applySize(sizePx - SIZE_STEP));
   sizeUp  .addEventListener('click', ()=> applySize(sizePx + SIZE_STEP));
 
-  // UD / スピード
+  // UD
   udToggle.addEventListener('change', ()=>{ document.body.classList.toggle('ud', udToggle.checked); });
-  speedToggle.addEventListener('change', ()=>{
-    speedMode = speedToggle.checked;
-    next();
-  });
+
+  // スピードモード・スイッチ
+// 旧: speedToggle.addEventListener('change', ()=>{ speedMode = speedToggle.checked; ... next(); });
+// 新:
+speedToggle.addEventListener('change', ()=>{
+  speedMode = speedToggle.checked;
+  try{ localStorage.setItem(LS_SPEED, speedMode ? '1' : '0'); }catch(_){}
+
+  if (speedMode){
+    // ON：答え表示を禁止して、その場でカウントダウン開始（問題はそのまま）
+    btnReveal.disabled = true;
+    startTimer();
+  }else{
+    // OFF：タイマーを止めて、答え表示を許可（問題はそのまま続行）
+    btnReveal.disabled = false;
+    stopTimer();
+  }
+});
 
   // ===== 初期化 =====
   function init(){
     loadStreak(); renderStreak();
     document.body.classList.toggle('ud', udToggle.checked);
-    speedMode = !!speedToggle.checked;
+
+    // 保存済みスピードモード反映
+    speedToggle.checked = speedMode;
+
     applySize(sizePx);
     next();
   }
