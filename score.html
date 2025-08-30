@@ -157,6 +157,53 @@
   }
 }
 
+/* =========================================
+   モバイル調整（4要件まとめて）
+   ========================================= */
+
+/* 0) 安定系：横方向のガタつき防止＆横スクロール無効 */
+@media (max-width:900px){
+  html,body{ overflow-x:hidden; } /* 横幅を固定に見せる */
+}
+
+/* 1) 縦画面：横幅を“安定した幅”で使う（vwの揺れ対策） */
+@media (max-width:900px) and (orientation:portrait){
+  /* 外枠のボーダーを外して高さを取り切る（②の保険にもなる） */
+  .frame{ border:0; }
+
+  /* メニュー（ドロワー）の幅を安定Viewport幅で計算（iOSのアドレスバー揺れ対策） */
+  .left{ width:min(85vw,380px); max-width:92vw; }           /* 旧端末向けフォールバック */
+}
+@supports (width: 1dvw){
+  @media (max-width:900px) and (orientation:portrait){
+    .left{ width:min(85dvw,380px); max-width:92dvw; }       /* 新端末ではdvwを優先 */
+  }
+}
+
+/* 2) 横画面：下が切れる対策（外枠ボーダーを外す＋100svhで埋める） */
+@media (max-width:900px) and (orientation:landscape){
+  .frame{ border:0; }                   /* 外側の枠を外す → きっちり高さが使える */
+  .right{ min-height:100svh; }          /* アドレスバーに影響されない安定高さ */
+}
+
+/* 3) 縦画面：モバイルメニューボタンがページ内タイトルを隠さないよう
+      iframe側に余白（トップバー分）を確保 */
+:root{ --mobile-topbar: 46px; }         /* トップボタンの占有高（好みで調整） */
+@media (max-width:900px) and (orientation:portrait){
+  .viewerWrap{ padding-top: var(--mobile-topbar); }
+  .mobileMenuBtn{ top:8px; }            /* ボタンを少し下げる（被り軽減） */
+}
+
+/* 4) 横画面：メニューを開いても中をスクロールできるようにする
+      （背景スクロールは止めつつ、ドロワー本体はスクロール可） */
+@media (max-width:900px){
+  body.drawer-open{ overflow:hidden; }  /* 背景は止める（既存） */
+  .left{ overflow:auto; -webkit-overflow-scrolling:touch; }
+  /* スクロール操作をドロワーに閉じ込めて背面に伝播させない */
+  .left{ overscroll-behavior: contain; }
+}
+
+
 </style>
 </head>
 <body class="theme-chalk">
