@@ -3,28 +3,28 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>麻雀練習 – ホーム</title>
-
+<title>麻雀練習 – モバイル最適化（ドロワー）</title>
 <link href="https://fonts.googleapis.com/css2?family=Gloria+Hallelujah&family=Caveat:wght@700&display=swap" rel="stylesheet">
-
 <style>
   :root{
-    --line:#111; --accent:#2b6ff6;
-    --wood-w: 14px;
-    --chalk-font: "Gloria Hallelujah","Caveat","Hiragino Sans","Yu Gothic UI","YuGothic",system-ui,sans-serif;
-    --bp: 920px; /* ブレークポイント */
+    --line:#111; --wood-w:14px;
+    --chalk-font:"Gloria Hallelujah","Caveat","Hiragino Sans","Yu Gothic UI","YuGothic",system-ui,sans-serif;
   }
   *{ box-sizing:border-box }
   html,body{ height:100% }
   body{ margin:0; font:16px/1.9 "Hiragino Sans","Yu Gothic UI","YuGothic","Segoe UI",system-ui,sans-serif; color:#111; background:#fff }
 
-  /* --- レイアウト --- */
-  .frame{ min-height:100dvh; display:grid; grid-template-columns:380px 1fr; border:3px solid var(--line); }
+  /* ===== ベースレイアウト（PC/タブレット） ===== */
+  .frame{
+    min-height:100svh;              /* ← iOSでの表示領域に追従 */
+    display:grid; grid-template-columns:380px 1fr;
+    border:3px solid var(--line);
+  }
   .left{ border-right:3px solid var(--line); }
-  .right{ display:flex; flex-direction:column; min-height:100dvh; }
+  .right{ display:flex; flex-direction:column; min-height:100svh; }
 
-  /* 黒板(木枠)左ペイン */
-  .woodBox{ height:100%; }
+  /* 黒板メニュー */
+  .woodBox{ height:100% }
   .chalk{ height:100%; display:flex; flex-direction:column; gap:16px; padding:18px 16px; font-size:18.5px; }
   .sideTools{ position:sticky; top:0; z-index:5; display:flex; align-items:center; justify-content:space-between;
               padding:10px 6px 14px; border-bottom:1px solid #ccc; background:#fff; font-size:18px; }
@@ -42,91 +42,74 @@
   .btn.active{ outline:2px solid #ffc04d; background:#fff9e6 }
 
   /* 右：iframe 全面（枠なし） */
-  .viewerWrap{ flex:1; display:flex; flex-direction:column; padding:0; }
-  .viewer{ flex:1; position:relative; border:0; overflow:hidden; background:transparent; }
+  .viewerWrap{ flex:1; display:flex; flex-direction:column; }
+  .viewer{ flex:1; position:relative }
   iframe{ width:100%; height:100%; border:0; display:block; background:#fff }
-
   .spinner{ position:absolute; inset:0; display:grid; place-items:center; background:linear-gradient(#fff,#fff9); opacity:0; transition:opacity .15s; pointer-events:none; }
   .spinner.show{ opacity:1; pointer-events:auto }
   .spinner::after{ content:""; width:36px; height:36px; border:4px solid #cbd7ff; border-top-color:#2b6ff6; border-radius:50%; animation:spin 1s linear infinite }
   @keyframes spin{ to{ transform:rotate(360deg) } }
-  .warn{ color:#a22; font-size:13px; margin-top:6px }
+  .warn{ color:#a22; font-size:13px; margin:6px 0 0 }
 
-  /* --- 黒板固定テーマ（左ペイン） --- */
+  /* ===== 黒板テーマ ===== */
   body.theme-chalk .woodBox{
-    background:
-      linear-gradient(90deg,#7b4a21 0%, #945d2a 18%, #a56b31 32%, #935f2a 48%, #a86f3b 66%, #845225 100%),
-      repeating-linear-gradient(0deg, #0000 0 6px, #0000000e 6px 7px);
+    background:linear-gradient(90deg,#7b4a21 0%, #945d2a 18%, #a56b31 32%, #935f2a 48%, #a86f3b 66%, #845225 100%),
+               repeating-linear-gradient(0deg,#0000 0 6px,#0000000e 6px 7px);
   }
   body.theme-chalk .chalk{
-    margin: var(--wood-w); position:relative; color:#f6fff6;
-    background: radial-gradient(1200px 600px at 20% 0%, #2b5a45 0%, #1f4434 60%, #1a3b2d 100%);
+    margin:var(--wood-w); position:relative; color:#f6fff6;
+    background:radial-gradient(1200px 600px at 20% 0%, #2b5a45 0%, #1f4434 60%, #1a3b2d 100%);
   }
   body.theme-chalk .chalk::after{
     content:""; position:absolute; inset:0; pointer-events:none; opacity:.35;
-    background:
-      radial-gradient(3px 3px at 12% 14%, #fff3 0, transparent 60%),
-      radial-gradient(2px 2px at 78% 22%, #fff2 0, transparent 60%),
-      radial-gradient(2px 2px at 34% 66%, #fff2 0, transparent 60%),
-      radial-gradient(1.6px 1.6px at 58% 48%, #fff2 0, transparent 60%);
+    background:radial-gradient(3px 3px at 12% 14%,#fff3 0,transparent 60%),
+               radial-gradient(2px 2px at 78% 22%,#fff2 0,transparent 60%),
+               radial-gradient(2px 2px at 34% 66%,#fff2 0,transparent 60%),
+               radial-gradient(1.6px 1.6px at 58% 48%,#fff2 0,transparent 60%);
   }
   body.theme-chalk .title,
   body.theme-chalk .mGroup h2,
-  body.theme-chalk .backLink{ color:#f6fff6; text-shadow: 0 1px 0 #173226, 0 0 6px #ffffff22; font-family: var(--chalk-font); }
-  body.theme-chalk .btn{ font-family: var(--chalk-font); color:#fefefe; background:transparent; border:2px dashed #ffffff88; border-radius:12px; box-shadow: 0 0 0 1px #ffffff1e inset, 0 0 12px #ffffff1a inset; }
-  body.theme-chalk .btn:hover{ background:#ffffff10; border-color:#ffffffaa; transform: translateY(-1px); }
-  body.theme-chalk .btn.active{ outline:0; box-shadow: 0 0 0 2px #fff inset, 0 0 18px #ffffff55 inset; }
+  body.theme-chalk .backLink{ color:#f6fff6; text-shadow:0 1px 0 #173226,0 0 6px #ffffff22; font-family:var(--chalk-font); }
+  body.theme-chalk .btn{ font-family:var(--chalk-font); color:#fefefe; background:transparent; border:2px dashed #ffffff88; border-radius:12px; box-shadow:0 0 0 1px #ffffff1e inset,0 0 12px #ffffff1a inset; }
+  body.theme-chalk .btn:hover{ background:#ffffff10; border-color:#ffffffaa; transform:translateY(-1px); }
+  body.theme-chalk .btn.active{ outline:0; box-shadow:0 0 0 2px #fff inset,0 0 18px #ffffff55 inset; }
   body.theme-chalk .sideTools{ background:linear-gradient(#ffffffcc,#ffffffee); border-bottom:3px solid #d7d7d7; }
-  body.theme-chalk .tool{ background:#fff; border:1px solid #d3d3d3; color:#222; box-shadow: 0 1px 0 #fff inset, 0 2px 6px #00000014; }
-  body.theme-chalk a{ color:#fdfdfd; }
-  body.theme-chalk a:hover{ color:#ffffff; text-decoration:underline; }
+  body.theme-chalk .tool{ background:#fff; border:1px solid #d3d3d3; color:#222; box-shadow:0 1px 0 #fff inset,0 2px 6px #00000014; }
+  body.theme-chalk a{ color:#fdfdfd } body.theme-chalk a:hover{ color:#fff; text-decoration:underline }
 
-  /* === モバイル：左ペインをドロワー化、右は常に全幅 === */
-  @media (max-width: var(--bp)){
-    .frame{ grid-template-columns:1fr; grid-template-rows:1fr; } /* 右だけをフローに残す */
+  /* ===== モバイル：900px以下はドロワー化（※CSS変数不使用） ===== */
+  @media (max-width: 900px){
+    .frame{ grid-template-columns:1fr; grid-template-rows:1fr; } /* 右だけ流す */
     .left{
-      position: fixed; inset:0 auto 0 0; width:min(85vw, 380px); max-width:92vw;
-      transform: translateX(-100%);
-      transition: transform .25s ease, box-shadow .25s ease;
-      z-index: 1001;
-      border-right:3px solid var(--line);
-      border-bottom:0;
+      position:fixed; inset:0 auto 0 0; width:min(85vw,380px); max-width:92vw;
+      transform:translateX(-100%); transition:transform .25s ease, box-shadow .25s ease;
+      z-index:1001; border-right:3px solid var(--line); border-bottom:0;
     }
-    body.drawer-open .left{
-      transform: translateX(0);
-      box-shadow: 8px 0 24px #0007;
-    }
+    body.drawer-open .left{ transform:translateX(0); box-shadow:8px 0 24px #0007; }
+    body.drawer-open{ overflow:hidden } /* ← 背面スクロール禁止 */
 
-    /* メニューを開閉するフローティングボタン（右ペイン上） */
     .mobileMenuBtn{
-      position: fixed; top:10px; left:10px; z-index:1002;
-      border:1px solid #bbb; background:#fff; border-radius:10px;
-      padding:8px 12px; font-weight:800; cursor:pointer;
-      box-shadow: 0 2px 8px #0002;
+      position:fixed; top:10px; left:10px; z-index:1002;
+      border:1px solid #bbb; background:#fff; border-radius:10px; padding:8px 12px;
+      font-weight:800; cursor:pointer; box-shadow:0 2px 8px #0002;
     }
-
-    /* ドロワー背面のブラー/暗幕 */
     .drawerBackdrop{
-      position: fixed; inset:0; background:#0008;
-      opacity:0; pointer-events:none; transition: opacity .2s ease; z-index:1000;
-      backdrop-filter: blur(2px);
+      position:fixed; inset:0; background:#0008; opacity:0; pointer-events:none;
+      transition:opacity .2s ease; z-index:1000; backdrop-filter:blur(2px);
     }
     body.drawer-open .drawerBackdrop{ opacity:1; pointer-events:auto; }
   }
 </style>
 </head>
-
 <body class="theme-chalk">
 <div class="frame">
-  <!-- 左：黒板メニュー（モバイルではドロワー） -->
+  <!-- 左：黒板（モバイルはドロワー） -->
   <aside class="left" aria-label="メニュー" id="drawer">
     <div class="woodBox">
       <div class="chalk">
         <div class="sideTools">
           <a href="#" id="goHome" class="backLink">← トップページに戻る</a>
-          <div class="toolGroup">
-            <button class="tool" id="reload">再読込</button>
-          </div>
+          <div class="toolGroup"><button class="tool" id="reload">再読込</button></div>
         </div>
 
         <div class="title">麻雀練習</div>
@@ -149,9 +132,9 @@
     </div>
   </aside>
 
-  <!-- 右：全面 iframe -->
+  <!-- 右：常に全幅 -->
   <main class="right">
-    <!-- モバイル用：メニューボタン＆背面 -->
+    <!-- モバイル操作UI -->
     <button class="mobileMenuBtn" id="mobileMenuBtn" aria-controls="drawer" aria-expanded="false" aria-label="メニューを開く">≡ メニュー</button>
     <div class="drawerBackdrop" id="drawerBackdrop" aria-hidden="true"></div>
 
@@ -167,77 +150,35 @@
 </div>
 
 <script>
-/* ========= ページURL ========= */
+/* ページURL */
 const PAGES = {
-  tenpai7 : { label:'７枚型',        url:'https://mnrdkkm.github.io/practice/Tenpai_7mai.html' },
-  tenpai13: { label:'13枚型',       url:'https://mnrdkkm.github.io/practice/Tenpai_13mai.html' },
+  tenpai7 : { label:'７枚型',  url:'https://mnrdkkm.github.io/practice/Tenpai_7mai.html' },
+  tenpai13: { label:'13枚型',  url:'https://mnrdkkm.github.io/practice/Tenpai_13mai.html' },
   hufan   : { label:'符／翻を数える', url:'https://mnrdkkm.github.io/practice/choose_hu-fan.html' }
 };
 
-/* ========= ホーム（白太枠＋薄緑／タイトル・見出しリボン／リンク青グラデ） ========= */
-const HOME_DOC = `
-<!doctype html><html lang="ja"><meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+/* ホーム（中略：前回そのままでもOK。省略したい場合ここに入れてね） */
+const HOME_DOC = `<!doctype html><html lang="ja"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1" />
 <style>
-  html,body{height:100%}
-  body{
-    margin:0; font:18px/1.9 -apple-system,system-ui,"Segoe UI","Hiragino Sans","Yu Gothic UI","YuGothic",sans-serif;
-    color:#f5fbf6; background:#1a5f47; display:grid; place-items:center;
-  }
-  .panel{
-    width:min(1000px, 94vw);
-    padding:28px 28px 30px;
-    border:8px solid #fff; border-radius:16px;
-    background:
-      radial-gradient(120% 90% at 35% 25%, #2c8766 0%, #247c5c 45%, #1e6f52 70%, #1a5f47 100%);
-    box-shadow: 0 16px 40px #0006, inset 0 0 0 2px #ffffff14;
-  }
-  .ribbon{
-    display:inline-block; padding:12px 20px; font-size:1.5em; line-height:1.15;
-    color:#222; font-weight:900; letter-spacing:.02em;
-    background: linear-gradient(#ffcc2f 0%, #ffe387 42%, #ffffff 100%);
-    border:1.5px solid #000; border-radius:18px;
-    box-shadow: 0 1px 0 #fff inset, 0 1px 6px #0005;
-  }
-  .subRibbon{
-    display:inline-block; margin:22px 0 6px; padding:6px 12px;
-    color:#222; font-weight:900;
-    background: linear-gradient(#ffd24d 0%, #ffec9a 45%, #ffffff 100%);
-    border:1.5px solid #000; border-radius:12px;
-    box-shadow: 0 1px 0 #fff inset, 0 1px 6px #0005;
-  }
-  p{ margin:6px 0 12px; }
-  ul{ margin:6px 0 0 1.2em } li{ margin:8px 0 }
-  .linkBtn{
-    display:inline-block; padding:6px 12px;
-    color:#0e2a4b; font-weight:900; text-decoration:none;
-    background: linear-gradient(#2e5f99 0%, #3f70a8 15%, #6e95c5 45%, #cfe0f0 72%, #ffffff 100%);
-    border:1.5px solid #000; border-radius:10px;
-    box-shadow: 0 1px 0 #ffffffcc inset, 0 2px 8px #0003;
-    transition: transform .06s ease, box-shadow .15s ease;
-  }
-  .linkBtn:hover{ transform: translateY(-2px); box-shadow: 0 2px 0 #0003, 0 6px 12px #0004; }
+  html,body{height:100%}body{margin:0;font:18px/1.9 -apple-system,system-ui,"Segoe UI","Hiragino Sans","Yu Gothic UI","YuGothic",sans-serif;color:#f5fbf6;background:#1a5f47;display:grid;place-items:center}
+  .panel{width:min(1000px,94vw);padding:28px;border:8px solid #fff;border-radius:16px;background:radial-gradient(120% 90% at 35% 25%,#2c8766 0%,#247c5c 45%,#1e6f52 70%,#1a5f47 100%);box-shadow:0 16px 40px #0006,inset 0 0 0 2px #ffffff14}
+  .ribbon{display:inline-block;padding:12px 20px;font-size:1.5em;line-height:1.15;color:#222;font-weight:900;letter-spacing:.02em;background:linear-gradient(#ffcc2f 0%,#ffe387 42%,#ffffff 100%);border:1.5px solid #000;border-radius:18px;box-shadow:0 1px 0 #fff inset,0 1px 6px #0005}
+  .subRibbon{display:inline-block;margin:22px 0 6px;padding:6px 12px;color:#222;font-weight:900;background:linear-gradient(#ffd24d 0%,#ffec9a 45%,#ffffff 100%);border:1.5px solid #000;border-radius:12px;box-shadow:0 1px 0 #fff inset,0 1px 6px #0005}
+  p{margin:6px 0 12px}ul{margin:6px 0 0 1.2em}li{margin:8px 0}
+  .linkBtn{display:inline-block;padding:6px 12px;color:#0e2a4b;font-weight:900;text-decoration:none;background:linear-gradient(#2e5f99 0%,#3f70a8 15%,#6e95c5 45%,#cfe0f0 72%,#ffffff 100%);border:1.5px solid #000;border-radius:10px;box-shadow:0 1px 0 #ffffffcc inset,0 2px 8px #0003;transition:transform .06s,box-shadow .15s}
+  .linkBtn:hover{transform:translateY(-2px);box-shadow:0 2px 0 #0003,0 6px 12px #0004}
 </style>
-<body>
-  <div class="panel">
-    <div class="ribbon">麻雀の練習メニュー</div>
+<body><div class="panel">
+  <div class="ribbon">麻雀の練習メニュー</div>
+  <div class="subRibbon">①和了の形を覚えよう</div>
+  <p>テンパイした状態から上がりの牌をすべて選択できるか！？</p>
+  <ul><li><a class="linkBtn" href="${PAGES.tenpai7.url}">・７枚型</a></li><li><a class="linkBtn" href="${PAGES.tenpai13.url}">・13枚型</a></li></ul>
+  <div class="subRibbon">②点数計算を覚えよう</div>
+  <p>符の計算と役の計算ができるか？ 成立役をメモするモードと点数を覚えるモードを選べます。</p>
+  <ul><li><a class="linkBtn" href="${PAGES.hufan.url}">・符/翻を数える</a></li></ul>
+</div></body></html>`;
 
-    <div class="subRibbon">①和了の形を覚えよう</div>
-    <p>テンパイした状態から上がりの牌をすべて選択できるか！？</p>
-    <ul>
-      <li><a class="linkBtn" href="${PAGES.tenpai7.url}">・７枚型</a></li>
-      <li><a class="linkBtn" href="${PAGES.tenpai13.url}">・13枚型</a></li>
-    </ul>
-<BR>
-    <div class="subRibbon">②点数計算を覚えよう</div>
-    <p>符の計算と役の計算ができるか？ 成立役をメモするモードと点数を覚えるモードを選べます。</p>
-    <ul>
-      <li><a class="linkBtn" href="${PAGES.hufan.url}">・符/翻を数える</a></li>
-    </ul>
-  </div>
-</body></html>`;
-
-/* ========= 要素 ========= */
+/* 要素 */
 const view   = document.getElementById('view');
 const spin   = document.getElementById('spin');
 const warn   = document.getElementById('warn');
@@ -247,20 +188,19 @@ const buttons = [...document.querySelectorAll('.btn')];
 const menuBtn = document.getElementById('mobileMenuBtn');
 const backdrop = document.getElementById('drawerBackdrop');
 
-/* ========= ヘルパー ========= */
+/* ヘルパー */
 const setReloadHandler = fn => { if (reloadBt) reloadBt.onclick = fn; };
 function closeDrawer(){ document.body.classList.remove('drawer-open'); menuBtn?.setAttribute('aria-expanded','false'); }
 function openDrawer(){ document.body.classList.add('drawer-open'); menuBtn?.setAttribute('aria-expanded','true'); }
-
-/* ========= 挙動 ========= */
 function setActive(id){ buttons.forEach(b => b.classList.toggle('active', b.dataset.id === id)); }
 
+/* 挙動 */
 function loadHome(){
   warn.textContent=''; setActive(''); history.replaceState({}, '', '#');
   spin.classList.remove('show'); spin.style.display='none';
   view.removeAttribute('src'); view.setAttribute('srcdoc', HOME_DOC);
   setReloadHandler(() => loadHome());
-  closeDrawer(); // モバイルでホームへ戻ったら閉じる
+  closeDrawer();
 }
 function openPage(id){
   const p=PAGES[id]; if(!p) return;
@@ -275,34 +215,18 @@ function openPage(id){
   view.onerror=()=>{ spin.classList.remove('show'); spin.style.display='none';
     warn.textContent='読み込みに失敗しました。「新しいタブ」で開いてください。'; };
   setTimeout(()=>{ if(spin.classList.contains('show')){ spin.classList.remove('show'); spin.style.display='none'; } },2000);
-  closeDrawer(); // メニューから遷移したら自動で閉じる
+  closeDrawer();
 }
 
 /* イベント */
 buttons.forEach(b=>b.addEventListener('click',()=>openPage(b.dataset.id)));
 goHome.addEventListener('click',e=>{ e.preventDefault(); loadHome(); });
-
-/* モバイル用メニューボタンと背面 */
-menuBtn?.addEventListener('click', () => {
-  const open = !document.body.classList.contains('drawer-open');
-  open ? openDrawer() : closeDrawer();
-});
+menuBtn?.addEventListener('click', ()=> document.body.classList.contains('drawer-open') ? closeDrawer() : openDrawer());
 backdrop?.addEventListener('click', closeDrawer);
-document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeDrawer(); });
-
-/* 画面幅が広くなったら強制的にドロワー閉じてクリーンに */
-window.addEventListener('resize', () => {
-  if (window.matchMedia(`(min-width: ${getComputedStyle(document.documentElement).getPropertyValue('--bp').trim()})`).matches){
-    closeDrawer();
-  }
-});
+document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeDrawer(); });
 
 /* 初期表示 */
-(function init(){
-  const m=location.hash.match(/#p=([^&]+)/);
-  if(m){ openPage(decodeURIComponent(m[1])); }
-  else { loadHome(); }
-})();
+(function(){ const m=location.hash.match(/#p=([^&]+)/); m ? openPage(decodeURIComponent(m[1])) : loadHome(); })();
 </script>
 </body>
 </html>
