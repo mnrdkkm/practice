@@ -44,6 +44,35 @@
   #streakRow strong{ font-size: 1.1em; }
   .btnRow{ display:flex; gap:14px; justify-content:center; flex-wrap:wrap; align-items:center; }
   .timer{ font-weight:800; min-width: 6ch; display:inline-block; }
+
+#result{
+  margin: .6rem 0 .2rem;
+  font-weight: 800;
+  font-size: clamp(16px, 4.2vw, 18px);
+}
+
+/* --- 結果表示のための固定スロット --- */
+.resultSlot{
+  /* 1行～2行分くらいの高さを常時確保（画面幅に合わせて少し可変） */
+  min-height: clamp(36px, 5.4vw, 64px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: .6rem 0 .2rem;
+  padding: 4px 8px;
+}
+
+/* #result が空でも高さが潰れないようにする保険 */
+#result:empty::before{
+  content: " ";
+  white-space: pre;
+}
+
+/* （任意）見やすさ強化：正解/不正解の色 */
+#result.ok{ color:#0a7d3a; font-weight:800; }
+#result.ng{ color:#b7152b; font-weight:800; }
+
+
 </style>
 </head>
 <body>
@@ -60,6 +89,14 @@
     <button type="button" id="btnNext">次の問題 (N)</button>
     <span id="timer" class="timer" aria-live="polite"></span>
   </div>
+
+<!-- 操作ボタン列のすぐ下に置く -->
+<div class="resultSlot">
+  <div id="result" role="status" aria-live="polite"></div>
+</div>
+
+  <div id="result" aria-live="polite"></div>
+
   <div id="streakRow">
     <span>連続正解数：<strong><span id="streakNow">0</span></strong>回 (最高 <strong><span id="streakBest">0</span></strong>回)</span>
     <button type="button" id="streakReset">正解数リセット</button>
@@ -71,7 +108,6 @@
     <label><input id="speedToggle" type="checkbox"> スピードモード（固定10秒）</label>
   </div>
 
-  <div id="result" aria-live="polite"></div>
   <div id="err" aria-live="polite"></div>
 
 <script>
