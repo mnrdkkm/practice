@@ -208,6 +208,34 @@
   .viewerWrap, .viewer, #view { width:100%; max-width:100%; }
 }
 
+/* === 最小差分パッチ（見た目はそのままに不具合だけ修正） === */
+
+/* 1) モバイルの黒板：内容に応じて伸びるように */
+.woodBox{ min-height:100% !important; }
+.chalk{ min-height:100% !important; height:auto !important; }
+
+/* 2) PCで「トップページに戻る」を表示（白帯は出さない） */
+@media (min-width: 901px){
+  .left .sideTools{
+    display:flex !important;
+    gap:10px;
+    justify-content:flex-start;
+    background:transparent !important;
+    border:0 !important;
+    padding:4px 0 0 !important;
+    margin:12px 0 0 !important;
+    box-shadow:none !important;
+  }
+  /* すでに入っている“白帯対策”は維持でOK */
+  .left .chalk{ padding-top:0 !important; }
+  .left .chalk > :first-child{ margin-top:0 !important; }
+  .left{ position:relative; }
+  .left::before{
+    content:""; position:absolute; left:0; right:0; top:0;
+    height: var(--wood-w, 14px); background:#7b4a21; z-index:0;
+  }
+}
+
 </style>
 </head>
 <body class="theme-chalk">
