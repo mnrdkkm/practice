@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>フラッシュ点数計算</title>
+<style>
+  :root{ --green:#dfeee8; --line:#0c3e47; }
+  *{ box-sizing:border-box; }
+  body{ margin: clamp(8px,2.6vw,16px); font-family: system-ui,-apple-system,"Segoe UI",sans-serif; background: var(--green); color:#111; }
+  h1{ margin:.2em 0 .6em; font-size:clamp(20px,4.4vw,28px); letter-spacing:.08em }
+  .wrap{ max-width: 960px; margin: 0 auto; }
+
+  /* タイトル左端にコンテンツを揃える */
+  #panel-quiz, #panel-result { padding-left: 0; }
+  .qhead { margin-left: 0; }
+
+  /* 枠 */
+  .area{ background:#fff; border:2px solid #cfdcd6; border-radius:12px; padding:14px; }
+
+  /* ヘッダ（第◯問＋バッジ） */
+  .qhead{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin:10px 0 14px; }
+  .qnum{ font-weight:900; font-size:clamp(18px,3.8vw,22px); margin-right:6px; }
+  .badge{
+    padding:12px 18px; border-radius:12px; border:2px solid var(--line);
+    background: linear-gradient(#ffd24e, #ffffff 70%);
+    min-width: 110px; text-align:center; font-weight:800; letter-spacing:.08em;
+    box-shadow: 0 1px 0 rgba(0,0,0,.06);
+  }
+
+  /* 解答レーンとスタートレーンを同寸にして左端に合わせる */
+  .answers, .startRow{
+    inline-size: min(720px, 100%);
+    margin-left: 0;
+    margin-right: auto;
+  }
+
+  /* 解答ボタン（角丸／上青→下白） */
+  .answers{
+    display:grid; grid-template-columns: repeat(2, minmax(180px,1fr));
+    gap:14px 18px;
+  }
+  .ansBtn{
+    padding:12px 22px; border-radius:14px; border:3px solid var(--line);
+    background: linear-gradient(#2f66a4, #ffffff 65%);
+    color:#111; font-weight:900; letter-spacing:.04em;
+    font-size:clamp(16px,3.6vw,18px); cursor:pointer; transition:.03s transform;
+  }
+  .ansBtn:active{ transform: translateY(1px); }
+  .disabled{ opacity:.6; pointer-events:none }
+
+  /* スタート（点棒風） */
+  .startRow{ display:flex; justify-content:center; margin-top:18px; margin-bottom:6px; }
+  .startBtn{
+    position:relative; display:inline-block;
+    padding:16px 28px; border-radius:14px; background:#fff; border:4px solid #222;
+    min-width: 280px; text-align:center; font-size:clamp(18px,4.6vw,22px);
+    cursor:pointer; font-weight:900; letter-spacing:.25em; color:#b40000;
+  }
+  .startBtn::before{
+    content:""; position:absolute; left:12px; right:12px; top:6px; height:8px; border-radius:8px; background:rgba(0,0,0,.12);
+  }
+  .stick-100   { background:#fff;    color:#111;  border-color:#333; }
+  .stick-500   { background:#0e7d5b; color:#fff; }
+  .stick-1000  { background:#2e6bd1; color:#fff; }
+  .stick-5000  { background:#f1c40f; color:#333; }
+  .stick-10000 { background:#d4472f; color:#fff; }
+  .stick-100::before   { background:radial-gradient(#111 3px, transparent 4px) 50% 50%/18px 8px repeat-x; }
+  .stick-500::before   { background:radial-gradient(#fff 2px, transparent 3px) 50% 50%/14px 8px repeat-x; }
+  .stick-1000::before  { background:radial-gradient(#fff 3px, transparent 4px) 50% 50%/22px 8px repeat-x; }
+  .stick-5000::before  { background:radial-gradient(#333 3px, transparent 4px) 50% 50%/18px 8px repeat-x; }
+  .stick-10000::before { background:radial-gradient(#fff 3px, transparent 4px) 50% 50%/22px 8px repeat-x; }
+
+  /* 結果表 */
+  .resultWrap{ display:grid; grid-template-columns: 1.1fr 1.2fr; gap:16px; }
+  .btnRow{ margin:8px 0 12px; }
+  .again{ padding:10px 14px; border:2px solid var(--line); border-radius:10px; background:#fff; font-weight:800; }
+  table{ width:100%; border-collapse:collapse; }
+  th, td{ border:1px solid #999; padding:8px 10px; font-weight:800; text-align:center; }
+  th{ background:#f7f7f7 }
+  .colSmall{ width:64px }
+  .markOk{ color:#0b7d00; font-weight:900 }
+  .markNg{ color:#c0002b; font-weight:900 }
+  .hide{ display:none !important; }
+
+  @media (max-width:720px){
+    .answers{ grid-template-columns: 1fr; }
+    .resultWrap{ grid-template-columns: 1fr; }
+  } /* ← 閉じ忘れ注意 */
+
+/* 正誤判定テーブルの点数表示を左寄せ */
+#tblA th:nth-child(2),
+#tblA th:nth-child(3),
+#tblA td:nth-child(2),
+#tblA td:nth-child(3){
+  text-align: left;
+  padding-left: 12px;   /* お好みで調整 */
+}
+
+/* 1列目（◯/✕）は中央寄せのまま */
+#tblA td:first-child,
+#tblA th:first-child{
+  text-align: center;
+}
+
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>フラッシュ点数計算</h1>
+
+  <!-- 出題パネル -->
+  <section id="panel-quiz" class="area">
+    <div class="qhead">
+      <div id="qnum" class="qnum">第①問</div>
+      <div id="bd-oya"  class="badge">親／子</div>
+      <div id="bd-type" class="badge">ツモ／ロン</div>
+      <div id="bd-fu"   class="badge">符</div>
+      <div id="bd-han"  class="badge">翻</div>
+    </div>
+
+    <div class="answers">
+      <button class="ansBtn" data-idx="0">点数A</button>
+      <button class="ansBtn" data-idx="1">点数B</button>
+      <button class="ansBtn" data-idx="2">点数C</button>
+      <button class="ansBtn" data-idx="3">点数D</button>
+    </div>
+
+    <div class="startRow"><button id="btnStart" class="startBtn">スタート</button></div>
+  </section>
+
+  <!-- 結果パネル -->
+  <section id="panel-result" class="area hide">
+    <div class="btnRow"><button id="btnAgain" class="again">もう１回挑戦</button></div>
+    <div class="resultWrap">
+      <div>
+        <table>
+          <thead>
+            <tr><th colspan="5">問題</th></tr>
+            <tr>
+              <th class="colSmall">No.</th>
+              <th>親/子</th>
+              <th>ツモ/ロン</th>
+              <th>符</th>
+              <th>翻</th>
+            </tr>
+          </thead>
+          <tbody id="tblQ"></tbody>
+        </table>
+      </div>
+      <div>
+        <table>
+          <thead>
+            <tr><th colspan="3">正誤判定</th></tr>
+            <tr><th class="colSmall">正誤</th><th>あなたの選択</th><th>正解</th></tr>
+          </thead>
+          <tbody id="tblA"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+(() => {
+  /* ========= 点数計算 ========= */
+  const FU_CAND  = [20,25,30,40,50,60];
+  const ceil100 = n => Math.ceil(n/100)*100;
+
+  // 上限名とレベル（0..4）
+  function getLimitLevel(fu, han){
+    if (han >= 13) return {name:'役満',   lv:4};
+    if (han >= 11) return {name:'三倍満', lv:3};
+    if (han >= 8 ) return {name:'倍満',   lv:2};
+    if (han >= 6 ) return {name:'跳満',   lv:1};
+    if (han >= 5 || (han===4 && fu>=40) || (han===3 && fu>=70)) return {name:'満貫', lv:0};
+    return null;
+  }
+  // 通常（非上限）
+  function normalPoints(oya, type, fu, han){
+    const base = fu * Math.pow(2, han + 2);
+    if (type === 'ロン'){
+      return (oya === '親') ? String(ceil100(6 * base)) : String(ceil100(4 * base));
+    }else{ // ツモ
+      if (oya === '親'){
+        const all = ceil100(2 * base);
+        return `${all}オール`;
+      }else{
+        const non = ceil100(1 * base);
+        const oyaP = ceil100(2 * base);
+        return `${non}/${oyaP}`;
+      }
+    }
+  }
+  // 上限
+  function limitPoints(oya, type, lv, withName=true){
+    const names = ['満貫','跳満','倍満','三倍満','役満'];
+    const nonChild = [2000,3000,4000, 6000, 8000];
+    const oyaPay   = [4000,6000,8000,12000,16000];
+    const childRon = [8000,12000,16000,24000,32000];
+    const oyaRon   = [12000,18000,24000,36000,48000];
+
+    let text;
+    if (type==='ツモ'){
+      if (oya==='親'){
+        text = `${oyaPay[lv]}オール`;
+      }else{
+        text = `${nonChild[lv]}/${oyaPay[lv]}`;
+      }
+    }else{
+      text = (oya==='親') ? String(oyaRon[lv]) : String(childRon[lv]);
+    }
+    return withName ? `${text}（${names[lv]}）` : text;
+  }
+  // withName：出題時は false（カッコ無し）／結果表示は true（カッコ付き）
+  function computeAnswer(oya, type, fu, han, withName=true){
+    const lim = getLimitLevel(fu, han);
+    if (lim) return limitPoints(oya, type, lim.lv, withName);
+    return normalPoints(oya, type, fu, han);
+  }
+
+  /* ========= DOM & 状態 ========= */
+  const panelQuiz   = document.getElementById('panel-quiz');
+  const panelResult = document.getElementById('panel-result');
+  const qnumEl = document.getElementById('qnum');
+  const bdOya  = document.getElementById('bd-oya');
+  const bdType = document.getElementById('bd-type');
+  const bdFu   = document.getElementById('bd-fu');
+  const bdHan  = document.getElementById('bd-han');
+  const btnStart= document.getElementById('btnStart');
+  const ansBtns = [...document.querySelectorAll('.ansBtn')];
+  const tblQ = document.getElementById('tblQ');
+  const tblA = document.getElementById('tblA');
+  const btnAgain = document.getElementById('btnAgain');
+
+  const TOTAL = 10;
+  let qIndex = 0, playing = false, current = null;
+  const history = [];
+
+  const rand = n => Math.floor(Math.random()*n);
+  const choice = arr => arr[rand(arr.length)];
+  // 低翻を出やすくする
+  const HAN_POOL = [1,1,1,1,2,2,2,3,3,3,4,4,5,6,7,8,9,10,11,12,13];
+  const toCircled = n => String.fromCodePoint('①'.codePointAt(0) + (n-1));
+  const formatQnum = i => `第${toCircled(i+1)}問`;
+
+  // ロンは20符を除外
+  function generateOne(oya, type, withName){
+    const fuPool = (type==='ロン') ? [25,30,40,50,60] : FU_CAND;
+    const fu  = choice(fuPool);
+    const han = choice(HAN_POOL);
+    const ans = computeAnswer(oya, type, fu, han, withName);
+    return {fu, han, ans};
+  }
+
+  function generateQuestion(){
+    const oya  = Math.random()<0.5 ? '親':'子';
+    const type = Math.random()<0.5 ? 'ツモ':'ロン';
+
+    // 出題用（括弧なし）と結果用（括弧あり）を分けて生成
+    const baseDisp = generateOne(oya, type, false);   // 例：3000/6000
+    const correctResult = computeAnswer(oya, type, baseDisp.fu, baseDisp.han, true); // 例：3000/6000（跳満）
+    const correctDisplay = baseDisp.ans;
+
+    // ダミーは出題用フォーマット（括弧なし）
+    const pool = new Set();
+    while(pool.size < 3){
+      const cand = generateOne(oya, type, false).ans;
+      if (cand !== correctDisplay) pool.add(cand);
+    }
+    const choices = [correctDisplay, ...pool];
+    for(let i=choices.length-1;i>0;i--){ const j=rand(i+1); [choices[i],choices[j]]=[choices[j],choices[i]]; }
+    const correctIdx = choices.indexOf(correctDisplay);
+
+    return { oya, type, fu: baseDisp.fu, han: baseDisp.han, choices, correctIdx, correct: correctResult };
+  }
+
+  function renderQuestion(){
+    const q = current;
+    qnumEl.textContent = formatQnum(qIndex);
+    bdOya.textContent  = q.oya;
+    bdType.textContent = q.type;
+    bdFu.textContent   = `${q.fu}符`;
+    bdHan.textContent  = `${q.han}翻`;
+    ansBtns.forEach((b,i)=>{ b.textContent = q.choices[i]; b.classList.remove('disabled'); });
+  }
+
+  function startGame(){
+    history.length = 0; qIndex = 0; playing = true;
+    btnStart.classList.add('hide');
+    randomizeStick();  // 次回のため色だけ先に決めておく
+    current = generateQuestion(); renderQuestion();
+  }
+
+  function answer(i){
+    if(!playing) return;
+    const q = current;
+    const ok = (i === q.correctIdx);
+    history.push({
+      no:qIndex+1, oya:q.oya, type:q.type, fu:q.fu, han:q.han,
+      correct:q.correct,      // ← 結果用：括弧あり
+      choice:q.choices[i],    // ← 選択肢：括弧なし
+      ok
+    });
+    qIndex++;
+    if(qIndex>=TOTAL){ playing=false; showResult(); return; }
+    current = generateQuestion(); renderQuestion();
+  }
+
+  /* ==== 結果表示（符/翻は別カラム） ==== */
+  function showResult(){
+    tblQ.innerHTML=''; tblA.innerHTML='';
+    history.forEach(h=>{
+      const trQ = document.createElement('tr');
+      trQ.innerHTML = `
+        <td>${toCircled(h.no)}</td>
+        <td>${h.oya}</td>
+        <td>${h.type}</td>
+        <td>${h.fu}</td>
+        <td>${h.han}</td>`;
+      tblQ.appendChild(trQ);
+
+      const trA = document.createElement('tr');
+      trA.innerHTML = `<td class="${h.ok?'markOk':'markNg'}">${h.ok?'◯':'✕'}</td><td>${h.choice}</td><td>${h.correct}</td>`;
+      tblA.appendChild(trA);
+    });
+    panelQuiz.classList.add('hide'); panelResult.classList.remove('hide');
+  }
+
+  function randomizeStick(){
+    const sticks = ['stick-100','stick-500','stick-1000','stick-5000','stick-10000'];
+    const btn = document.getElementById('btnStart');
+    btn.classList.remove(...sticks);
+    btn.classList.add(sticks[Math.floor(Math.random()*sticks.length)]);
+  }
+  function reset(){
+    panelResult.classList.add('hide'); panelQuiz.classList.remove('hide');
+    btnStart.classList.remove('hide'); ansBtns.forEach(b=> b.classList.add('disabled'));
+    qnumEl.textContent = formatQnum(0);
+    bdOya.textContent  = '親／子';
+    bdType.textContent = 'ツモ／ロン';
+    bdFu.textContent   = '符';
+    bdHan.textContent  = '翻';
+    randomizeStick();
+  }
+
+  btnStart.addEventListener('click', startGame);
+  ansBtns.forEach((b,i)=> b.addEventListener('click', ()=>answer(i)));
+  btnAgain.addEventListener('click', reset);
+  ansBtns.forEach(b=> b.classList.add('disabled'));
+  reset();
+})();
+</script>
+</body>
+</html>

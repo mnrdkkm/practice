@@ -1,373 +1,256 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ja">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>麻雀練習 – モバイル最適化（ドロワー）</title>
-<link href="https://fonts.googleapis.com/css2?family=Gloria+Hallelujah&family=Caveat:wght@700&display=swap" rel="stylesheet">
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>麻雀の練習メニュー</title>
 <style>
   :root{
-    --line:#111; --wood-w:14px;
-    --chalk-font:"Gloria Hallelujah","Caveat","Hiragino Sans","Yu Gothic UI","YuGothic",system-ui,sans-serif;
+    --board:#1a533e;      /* 黒板 */
+    --board-deep:#174b38;
+    --wood:#8a5422;       /* 木枠 */
+    --ink:#fff;           /* 黒板の文字 */
+    --btn-border:#0c3e47; /* 共通枠色 */
+    --page-bg:#0f523f;    /* 右側ベースの濃緑 */
   }
-  *{ box-sizing:border-box }
-  html,body{ height:100% }
-  body{ margin:0; font:16px/1.9 "Hiragino Sans","Yu Gothic UI","YuGothic","Segoe UI",system-ui,sans-serif; color:#111; background:#fff }
-
-  /* ===== ベースレイアウト（PC/タブレット） ===== */
-  .frame{
-    min-height:100svh;              /* iOSでの表示領域に追従 */
-    display:grid; grid-template-columns:380px 1fr;
-    border:3px solid var(--line);
-  }
-  .left{ border-right:3px solid var(--line); }
-  .right{ display:flex; flex-direction:column; min-height:100svh; }
-
-  /* 黒板メニュー */
-  .woodBox{ height:100% }
-  .chalk{ height:100%; display:flex; flex-direction:column; gap:16px; padding:18px 16px; font-size:18.5px; }
-
-  /* ← 白帯を消して黒板に溶け込ませる */
-  .sideTools{
-    position:sticky; top:0; z-index:5; display:flex; align-items:center; justify-content:space-between;
-    padding:8px 16px;
-    background:transparent;         /* 以前: #fff */
-    border-bottom:0;                 /* 以前: 1px solid #ccc */
-    font-size:18px;
-  }
-  .backLink{ color:inherit; font-weight:800; text-decoration:none }
-  .backLink:hover{ text-decoration:underline }
-  .tool{ border:1px solid #bbb; background:#fff; border-radius:10px; padding:8px 12px; font-weight:800; cursor:pointer; font-size:16.5px }
-  .tool:hover{ background:#f6f6f6 }
-  .toolGroup{ display:flex; gap:10px }
-  .title{ font-size:28px; font-weight:900; margin:2px 0; }
-  .mGroup{ margin:8px 0 }
-  .mGroup h2{ font-size:22px; margin:6px 0 }
-  .list{ margin:6px 0 0 10px }
-  .btn{ display:block; width:max-content; padding:6px 12px; border:2px solid #999; border-radius:10px; background:#fafafa; margin:8px 0; font-weight:800; cursor:pointer; font-size:18px; }
-  .btn:hover{ background:#f1f1f1 }
-  .btn.active{ outline:2px solid #ffc04d; background:#fff9e6 }
-
-  /* 右：iframe 全面（枠なし） */
-  .viewerWrap{ flex:1; display:flex; flex-direction:column; }
-  .viewer{ flex:1; position:relative }
-  iframe{ width:100%; height:100%; border:0; display:block; background:#fff }
-  .spinner{ position:absolute; inset:0; display:grid; place-items:center; background:linear-gradient(#fff,#fff9); opacity:0; transition:opacity .15s; pointer-events:none; }
-  .spinner.show{ opacity:1; pointer-events:auto }
-  .spinner::after{ content:""; width:36px; height:36px; border:4px solid #cbd7ff; border-top-color:#2b6ff6; border-radius:50%; animation:spin 1s linear infinite }
-  @keyframes spin{ to{ transform:rotate(360deg) } }
-  .warn{ color:#a22; font-size:13px; margin:6px 0 0 }
-
-  /* ===== 黒板テーマ ===== */
-  body.theme-chalk .woodBox{
-    background:linear-gradient(90deg,#7b4a21 0%, #945d2a 18%, #a56b31 32%, #935f2a 48%, #a86f3b 66%, #845225 100%),
-               repeating-linear-gradient(0deg,#0000 0 6px,#0000000e 6px 7px);
-  }
-  body.theme-chalk .chalk{
-    margin:var(--wood-w); position:relative; color:#f6fff6;
-    background:radial-gradient(1200px 600px at 20% 0%, #2b5a45 0%, #1f4434 60%, #1a3b2d 100%);
-  }
-  body.theme-chalk .chalk::after{
-    content:""; position:absolute; inset:0; pointer-events:none; opacity:.35;
-    background:radial-gradient(3px 3px at 12% 14%,#fff3 0,transparent 60%),
-               radial-gradient(2px 2px at 78% 22%,#fff2 0,transparent 60%),
-               radial-gradient(2px 2px at 34% 66%,#fff2 0,transparent 60%),
-               radial-gradient(1.6px 1.6px at 58% 48%,#fff2 0,transparent 60%);
-  }
-  body.theme-chalk .title,
-  body.theme-chalk .mGroup h2,
-  body.theme-chalk .backLink{ color:#f6fff6; text-shadow:0 1px 0 #173226,0 0 6px #ffffff22; font-family:var(--chalk-font); }
-  body.theme-chalk .btn{ font-family:var(--chalk-font); color:#fefefe; background:transparent; border:2px dashed #ffffff88; border-radius:12px; box-shadow:0 0 0 1px #ffffff1e inset,0 0 12px #ffffff1a inset; }
-  body.theme-chalk .btn:hover{ background:#ffffff10; border-color:#ffffffaa; transform:translateY(-1px); }
-  body.theme-chalk .btn.active{ outline:0; box-shadow:0 0 0 2px #fff inset,0 0 18px #ffffff55 inset; }
-  body.theme-chalk .tool{ background:#fff; border:1px solid #d3d3d3; color:#222; box-shadow:0 1px 0 #fff inset,0 2px 6px #00000014; }
-  body.theme-chalk a{ color:#fdfdfd } body.theme-chalk a:hover{ color:#fff; text-decoration:underline }
-
-  /* ====== PCではモバイル用UIを隠す（ベースで非表示） ====== */
-  .mobileMenuBtn,
-  .drawerBackdrop{
-    display:none;
+  html,body{height:100%}
+  body{
+    margin:0;
+    font-family: system-ui,-apple-system,"Segoe UI",Meiryo,Arial,sans-serif;
+    background:var(--page-bg);
+    color:#222;
   }
 
-  /* ===== モバイル：900px以下はドロワー化 ===== */
-  @media (max-width: 900px){
-    .frame{ grid-template-columns:1fr; grid-template-rows:1fr; } /* 右だけ流す */
-    .left{
-      position:fixed; inset:0 auto 0 0; width:min(85vw,380px); max-width:92vw;
-      transform:translateX(-100%); transition:transform .25s ease, box-shadow .25s ease;
-      z-index:1001; border-right:3px solid var(--line); border-bottom:0;
-    }
-    body.drawer-open .left{ transform:translateX(0); box-shadow:8px 0 24px #0007; }
-    body.drawer-open{ overflow:hidden } /* 背面スクロール禁止 */
-
-    /* モバイル時だけ表示＆固定配置 */
-    .mobileMenuBtn{
-      display:block;
-      position:fixed; top:10px; left:10px; z-index:1002;
-      border:1px solid #bbb; background:#fff; border-radius:10px;
-      padding:8px 12px; font-weight:800; cursor:pointer; box-shadow:0 2px 8px #0002;
-    }
-
-    .drawerBackdrop{
-      display:block;
-      position:fixed; inset:0; background:#0008;
-      opacity:0; pointer-events:none; transition:opacity .2s ease; z-index:1000;
-      backdrop-filter:blur(2px);
-    }
-    body.drawer-open .drawerBackdrop{ opacity:1; pointer-events:auto; }
+  /* レイアウト */
+  .wrap{
+    display:grid;
+    grid-template-columns: 320px 1fr;
+    gap:0;
+    height:100vh;
+  }
+  @media (max-width:960px){
+    .wrap{ grid-template-columns: 300px 1fr; }
+  }
+  @media (max-width:760px){
+    .wrap{ grid-template-columns: 1fr; height:auto; }
   }
 
-/* === PC で左ペイン上端の白い帯を完全に消す === */
-@media (min-width: 901px){
-
-  /* 1) sideTools行はPCでは出さない（高さも余白もゼロ） */
-  .left .sideTools{
-    display: none !important;
-    background: transparent !important;
-    border: 0 !important;
-    padding: 0 !important;
-    margin: 0 !important;
-    box-shadow: none !important;
+  /* 左：黒板 */
+  .side{
+    position:relative;
+    background:linear-gradient(180deg,var(--board) 0%,var(--board-deep) 100%);
+    border-left:12px solid var(--wood);
+    border-right:12px solid var(--wood);
+    box-shadow: inset 0 0 14px rgba(0,0,0,.45);
+    color:var(--ink);
+    padding:22px 16px 18px;
+  }
+  .side h1{
+    margin:0 0 14px; font-size:24px; letter-spacing:.12em;
+  }
+  .menuBlock{ margin:16px 0 24px }
+  .menuBlock h2{
+    margin:10px 0 10px;
+    font-size:20px; letter-spacing:.1em;
+    color:#fff; opacity:.95;
+  }
+  .list{ display:flex; flex-direction:column; gap:12px }
+  .btn{
+    width:100%;
+    padding:12px 14px;
+    border-radius:12px;
+    border:2px dashed rgba(255,255,255,.45);
+    background:rgba(255,255,255,.12);
+    color:#fff;
+    font-weight:800; letter-spacing:.03em;
+    cursor:pointer;
+    backdrop-filter: blur(1px);
+  }
+  .btn:hover{ filter:brightness(1.06) }
+  .btn.active{
+    outline:3px solid #ffe28a;
+    box-shadow:0 0 0 2px #123a2c inset;
+    background:rgba(255,255,255,.18);
+  }
+  .sideTools{ margin-top:20px; display:flex; gap:10px; flex-wrap:wrap }
+  .tool{
+    padding:8px 10px;
+    border-radius:10px;
+    background:#fff; color:#333;
+    border:2px solid var(--btn-border);
+    font-weight:800; cursor:pointer;
   }
 
-  /* 2) 上端の余白が食い込んでも帯が出ないように、上方向の余白を潰す */
-  .left .chalk{
-    padding-top: 0 !important;
-  }
-  .left .chalk > :first-child{
-    margin-top: 0 !important;
-  }
-
-  /* 3) 万が一背景が抜けても木枠色で覆う（擬似要素で上端を塗る） */
-  .left{
-    position: relative;
-  }
-  .left::before{
-    content: "";
-    position: absolute;
-    left: 0; right: 0; top: 0;
-    height: var(--wood-w, 14px);    /* 木枠と同じ厚み */
-    background: #7b4a21;            /* 木枠のベース色 */
-    z-index: 0;
+  /* 右：ステージ（濃緑の盤面） */
+  .stage{
+    position:relative;
+    /* 盤面っぽいグラデーションとビネット */
+    background:
+      radial-gradient(1200px 600px at 30% 10%, rgba(255,255,255,.06), transparent 60%),
+      radial-gradient(1200px 700px at 100% 100%, rgba(0,0,0,.35), transparent 60%),
+      linear-gradient(180deg,#105940 0%, #104e3b 100%);
+    box-shadow: inset 0 0 90px rgba(0,0,0,.35);
   }
 
-  /* 木枠のベース色の塗りつぶし（グラデが切れても白が出ないように保険） */
-  body.theme-chalk .woodBox{
-    background-color: #7b4a21 !important;
+  /* 白太枠のボード */
+  .panel{
+    position:relative;
+    margin:28px 24px;
+    height: calc(100vh - 56px);
+    border-radius:18px;
+    border:10px solid #fff;
+    background:
+      radial-gradient(1100px 600px at 20% 30%, rgba(255,255,255,.06), transparent 60%),
+      linear-gradient(180deg,#176a4d,#135c44);
+    box-shadow:
+      0 10px 40px rgba(0,0,0,.45),
+      inset 0 0 120px rgba(255,255,255,.07);
+    padding:22px 22px 18px;
   }
-}
-
-/* =========================================
-   モバイル調整（4要件まとめて）
-   ========================================= */
-
-/* 0) 安定系：横方向のガタつき防止＆横スクロール無効 */
-@media (max-width:900px){
-  html,body{ overflow-x:hidden; } /* 横幅を固定に見せる */
-}
-
-/* 1) 縦画面：横幅を“安定した幅”で使う（vwの揺れ対策） */
-@media (max-width:900px) and (orientation:portrait){
-  /* 外枠のボーダーを外して高さを取り切る（②の保険にもなる） */
-  .frame{ border:0; }
-
-  /* メニュー（ドロワー）の幅を安定Viewport幅で計算（iOSのアドレスバー揺れ対策） */
-  .left{ width:min(85vw,380px); max-width:92vw; }           /* 旧端末向けフォールバック */
-}
-@supports (width: 1dvw){
-  @media (max-width:900px) and (orientation:portrait){
-    .left{ width:min(85dvw,380px); max-width:92dvw; }       /* 新端末ではdvwを優先 */
+  @media (max-width:760px){
+    .panel{ height: auto; margin:14px; }
   }
-}
 
-/* 2) 横画面：下が切れる対策（外枠ボーダーを外す＋100svhで埋める） */
-@media (max-width:900px) and (orientation:landscape){
-  .frame{ border:0; }                   /* 外側の枠を外す → きっちり高さが使える */
-  .right{ min-height:100svh; }          /* アドレスバーに影響されない安定高さ */
-}
-
-/* 3) 縦画面：モバイルメニューボタンがページ内タイトルを隠さないよう
-      iframe側に余白（トップバー分）を確保 */
-:root{ --mobile-topbar: 46px; }         /* トップボタンの占有高（好みで調整） */
-@media (max-width:900px) and (orientation:portrait){
-  .viewerWrap{ padding-top: var(--mobile-topbar); }
-  .mobileMenuBtn{ top:8px; }            /* ボタンを少し下げる（被り軽減） */
-}
-
-/* 4) 横画面：メニューを開いても中をスクロールできるようにする
-      （背景スクロールは止めつつ、ドロワー本体はスクロール可） */
-@media (max-width:900px){
-  body.drawer-open{ overflow:hidden; }  /* 背景は止める（既存） */
-  .left{ overflow:auto; -webkit-overflow-scrolling:touch; }
-  /* スクロール操作をドロワーに閉じ込めて背面に伝播させない */
-  .left{ overscroll-behavior: contain; }
-}
-
-@media (max-width: 900px){
-  html, body { overflow-x:hidden; }
-  .viewerWrap, .viewer, #view { width:100%; max-width:100%; }
-}
-
-/* === 最小差分パッチ（見た目はそのままに不具合だけ修正） === */
-
-/* 1) モバイルの黒板：内容に応じて伸びるように */
-.woodBox{ min-height:100% !important; }
-.chalk{ min-height:100% !important; height:auto !important; }
-
-/* 2) PCで「トップページに戻る」を表示（白帯は出さない） */
-@media (min-width: 901px){
-  .left .sideTools{
-    display:flex !important;
-    gap:10px;
-    justify-content:flex-start;
-    background:transparent !important;
-    border:0 !important;
-    padding:4px 0 0 !important;
-    margin:12px 0 0 !important;
-    box-shadow:none !important;
+  /* ホーム文面（ボード内） */
+  .homeWrap{
+    color:#f3fbf6;
+    text-shadow: 0 1px 0 rgba(0,0,0,.3);
   }
-  /* すでに入っている“白帯対策”は維持でOK */
-  .left .chalk{ padding-top:0 !important; }
-  .left .chalk > :first-child{ margin-top:0 !important; }
-  .left{ position:relative; }
-  .left::before{
-    content:""; position:absolute; left:0; right:0; top:0;
-    height: var(--wood-w, 14px); background:#7b4a21; z-index:0;
+  .homeTitle{
+    display:inline-block;
+    padding:10px 16px;
+    border-radius:16px;
+    background:linear-gradient(#ffd349,#fff0b0 70%);
+    color:#4d3900; border:2px solid #7a5b00;
+    font-weight:900; font-size:26px; box-shadow:0 6px 18px rgba(0,0,0,.25);
+    margin-bottom:18px;
   }
-}
+  .homeCard{
+    border-radius:14px;
+    background:rgba(255,255,255,.06);
+    border:2px solid rgba(255,255,255,.18);
+    padding:16px; margin:18px 0;
+    box-shadow: inset 0 0 40px rgba(0,0,0,.2);
+  }
+  .homeCard .title{
+    display:inline-block;
+    background: linear-gradient(#ffe07e,#fff3c0 70%);
+    border:2px solid #7a5b00; border-radius:10px;
+    padding:4px 10px; font-weight:900; margin-bottom:8px; color:#4d3900;
+  }
+  .linkBtn{
+    display:inline-block; margin:6px 12px 0 0; padding:10px 12px;
+    border-radius:12px; background:linear-gradient(#2f66a4,#eef6ff 70%);
+    border:2px solid #0c3e47; text-decoration:none; color:#012; font-weight:900;
+  }
 
+  /* iframe（ボード内に表示） */
+  .viewer{
+    width:100%;
+    height: calc(100% - 8px);
+    border:0; border-radius:8px;
+    background:transparent;
+    display:none; /* ホームのとき隠す */
+  }
+
+  /* ホームとiframeの切替 */
+  .hide{ display:none !important; }
 </style>
 </head>
-<body class="theme-chalk">
-<div class="frame">
-  <!-- 左：黒板（モバイルはドロワー） -->
-  <aside class="left" aria-label="メニュー" id="drawer">
-    <div class="woodBox">
-      <div class="chalk">
+<body>
+<div class="wrap">
 
-<BR>
-<BR>
-        <div class="title">麻雀練習</div>
-        <div class="mGroup">
-          <h2>①和了の形を覚えよう</h2>
-          <div class="list">
-            <button class="btn" data-id="tenpai7">・７枚型</button>
-            <button class="btn" data-id="tenpai13">・13枚型</button>
-          </div>
-        </div>
+  <!-- 左ペイン：黒板メニュー -->
+  <aside class="side" id="left">
+    <h1>麻雀練習</h1>
 
-        <div class="mGroup">
-          <h2>②点数計算を覚えよう</h2>
-          <div class="list">
-            <button class="btn" data-id="hufan">・符/翻を数える</button>
-          </div>
+    <div class="menuBlock">
+      <h2>①和了の形を覚えよう</h2>
+      <div class="list">
+        <button class="btn" data-id="tenpai7">・７枚型</button>
+        <button class="btn" data-id="tenpai13">・13枚型</button>
+      </div>
+    </div>
 
-          <br>
-          <div class="sideTools">
-            <a href="#" id="goHome" class="backLink"><span style="color:gray">トップページに戻る</span></a>
-          </div>
-        </div>
-
+    <div class="menuBlock">
+      <h2>②点数計算を覚えよう</h2>
+      <div class="list">
+        <button class="btn" data-id="hufan">・符/翻を数える</button>
+        <button class="btn" data-id="flash">・フラッシュ点数計算</button>
+      </div>
+      <div class="sideTools">
+        <button class="tool" id="btnHome">← トップページに戻る</button>
+        <button class="tool" id="btnReload">再読込</button>
       </div>
     </div>
   </aside>
 
-  <!-- 右：常に全幅 -->
-  <main class="right">
-    <!-- モバイル操作UI -->
-    <button class="mobileMenuBtn" id="mobileMenuBtn" aria-controls="drawer" aria-expanded="false" aria-label="メニューを開く">≡ メニュー</button>
-    <div class="drawerBackdrop" id="drawerBackdrop" aria-hidden="true"></div>
+  <!-- 右ペイン：盤面＋白枠ボード -->
+  <section class="stage">
+    <div class="panel">
+      <div id="home" class="homeWrap">
+        <div class="homeTitle">麻雀の練習メニュー</div>
 
-    <div class="viewerWrap">
-      <div class="viewer">
-        <div class="spinner" id="spin"></div>
-        <iframe id="view" title="表示領域"
-          sandbox="allow-scripts allow-forms allow-same-origin allow-popups allow-top-navigation-by-user-activation"></iframe>
+        <div class="homeCard">
+          <div class="title">①和了の形を覚えよう</div>
+          <p>テンパイした状態から <strong>上がりの牌をすべて選択</strong>できるか！？</p>
+          <p>
+            <a class="linkBtn" href="https://mnrdkkm.github.io/practice/Tenpai_7mai.html" target="_blank">・７枚型</a>
+            <a class="linkBtn" href="https://mnrdkkm.github.io/practice/Tenpai_13mai.html" target="_blank">・13枚型</a>
+          </p>
+        </div>
+
+        <div class="homeCard">
+          <div class="title">②点数計算を覚えよう</div>
+          <p>符の計算と役の計算ができるか？ 成立役をメモできるモードや、点数表の確認もできます。</p>
+          <p>
+            <a class="linkBtn" href="https://mnrdkkm.github.io/practice/choose_hu-fan.html" target="_blank">・符/翻を数える</a>
+            <a class="linkBtn" href="https://mnrdkkm.github.io/practice/flash_score.html" target="_blank">・フラッシュ点数計算</a>
+          </p>
+        </div>
       </div>
-      <div class="warn" id="warn"></div>
+
+      <iframe id="view" class="viewer" title="viewer" src="" loading="lazy"></iframe>
     </div>
-  </main>
+  </section>
 </div>
 
 <script>
-/* ページURL */
+/* ------------------ ページ定義 ------------------ */
 const PAGES = {
   tenpai7 : { label:'７枚型',  url:'https://mnrdkkm.github.io/practice/Tenpai_7mai.html' },
   tenpai13: { label:'13枚型',  url:'https://mnrdkkm.github.io/practice/Tenpai_13mai.html' },
-  hufan   : { label:'符／翻を数える', url:'https://mnrdkkm.github.io/practice/choose_hu-fan.html' }
+  hufan   : { label:'符／翻を数える', url:'https://mnrdkkm.github.io/practice/choose_hu-fan.html' },
+  flash   : { label:'フラッシュ点数計算', url:'https://mnrdkkm.github.io/practice/flash_score.html' }
 };
 
-/* ホーム（中略：前回そのままでもOK。省略したい場合ここに入れてね） */
-const HOME_DOC = `<!doctype html><html lang="ja"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1" />
-<style>
-  html,body{height:100%}body{margin:0;font:18px/1.9 -apple-system,system-ui,"Segoe UI","Hiragino Sans","Yu Gothic UI","YuGothic",sans-serif;color:#f5fbf6;background:#1a5f47;display:grid;place-items:center}
-  .panel{width:min(1000px,94vw);padding:28px;border:8px solid #fff;border-radius:16px;background:radial-gradient(120% 90% at 35% 25%,#2c8766 0%,#247c5c 45%,#1e6f52 70%,#1a5f47 100%);box-shadow:0 16px 40px #0006,inset 0 0 0 2px #ffffff14}
-  .ribbon{display:inline-block;padding:12px 20px;font-size:1.5em;line-height:1.15;color:#222;font-weight:900;letter-spacing:.02em;background:linear-gradient(#ffcc2f 0%,#ffe387 42%,#ffffff 100%);border:1.5px solid #000;border-radius:18px;box-shadow:0 1px 0 #fff inset,0 1px 6px #0005}
-  .subRibbon{display:inline-block;margin:22px 0 6px;padding:6px 12px;color:#222;font-weight:900;background:linear-gradient(#ffd24d 0%,#ffec9a 45%,#ffffff 100%);border:1.5px solid #000;border-radius:12px;box-shadow:0 1px 0 #fff inset,0 1px 6px #0005}
-  p{margin:6px 0 12px}ul{margin:6px 0 0 1.2em}li{margin:8px 0}
-  .linkBtn{display:inline-block;padding:6px 12px;color:#0e2a4b;font-weight:900;text-decoration:none;background:linear-gradient(#2e5f99 0%,#3f70a8 15%,#6e95c5 45%,#cfe0f0 72%,#ffffff 100%);border:1.5px solid #000;border-radius:10px;box-shadow:0 1px 0 #ffffffcc inset,0 2px 8px #0003;transition:transform .06s,box-shadow .15s}
-  .linkBtn:hover{transform:translateY(-2px);box-shadow:0 2px 0 #0003,0 6px 12px #0004}
-</style>
-<body><div class="panel">
-  <div class="ribbon">麻雀の練習メニュー</div>
-<BR>
-  <div class="subRibbon">①和了の形を覚えよう</div>
-  <p>テンパイした状態から上がりの牌をすべて選択できるか！？</p>
-  <ul><li><a class="linkBtn" href="${PAGES.tenpai7.url}">・７枚型</a></li><li><a class="linkBtn" href="${PAGES.tenpai13.url}">・13枚型</a></li></ul>
-  <div class="subRibbon">②点数計算を覚えよう</div>
-  <p>符の計算と役の計算ができるか？ 成立役をメモするモードと点数を覚えるモードを選べます。</p>
-  <ul><li><a class="linkBtn" href="${PAGES.hufan.url}">・符/翻を数える</a></li></ul>
-</div></body></html>`;
+/* ------------------ 切り替え動作 ------------------ */
+const iframe   = document.getElementById('view');
+const homeEl   = document.getElementById('home');
+const menuBtns = Array.from(document.querySelectorAll('.btn'));
+const btnHome  = document.getElementById('btnHome');
+const btnReload= document.getElementById('btnReload');
 
-/* 要素 */
-const view   = document.getElementById('view');
-const spin   = document.getElementById('spin');
-const warn   = document.getElementById('warn');
-const reloadBt = document.getElementById('reload');
-const goHome = document.getElementById('goHome');
-const buttons = [...document.querySelectorAll('.btn')];
-const menuBtn = document.getElementById('mobileMenuBtn');
-const backdrop = document.getElementById('drawerBackdrop');
-
-/* ヘルパー */
-const setReloadHandler = fn => { if (reloadBt) reloadBt.onclick = fn; };
-function closeDrawer(){ document.body.classList.remove('drawer-open'); menuBtn?.setAttribute('aria-expanded','false'); }
-function openDrawer(){ document.body.classList.add('drawer-open'); menuBtn?.setAttribute('aria-expanded','true'); }
-function setActive(id){ buttons.forEach(b => b.classList.toggle('active', b.dataset.id === id)); }
-
-/* 挙動 */
-function loadHome(){
-  warn.textContent=''; setActive(''); history.replaceState({}, '', '#');
-  spin.classList.remove('show'); spin.style.display='none';
-  view.removeAttribute('src'); view.setAttribute('srcdoc', HOME_DOC);
-  setReloadHandler(() => loadHome());
-  closeDrawer();
+function showHome(){
+  homeEl.classList.remove('hide');
+  iframe.style.display = 'none';
+  iframe.src = '';
+  menuBtns.forEach(b=>b.classList.remove('active'));
 }
 function openPage(id){
-  const p=PAGES[id]; if(!p) return;
-  history.replaceState({},'', '#p='+encodeURIComponent(id));
-  warn.textContent=''; setActive(id);
-  spin.style.display=''; spin.classList.add('show');
-  setReloadHandler(() => view.contentWindow?.location.reload());
-  view.removeAttribute('srcdoc'); view.src=p.url;
-  view.onload=()=>{ spin.classList.remove('show'); spin.style.display='none';
-    try{ void view.contentDocument.title; warn.textContent=''; }
-    catch{ warn.textContent='このページは埋め込み不可の可能性があります。「新しいタブ」で開いてください。'; } };
-  view.onerror=()=>{ spin.classList.remove('show'); spin.style.display='none';
-    warn.textContent='読み込みに失敗しました。「新しいタブ」で開いてください。'; };
-  setTimeout(()=>{ if(spin.classList.contains('show')){ spin.classList.remove('show'); spin.style.display='none'; } },2000);
-  closeDrawer();
+  const p = PAGES[id]; if(!p) return;
+  menuBtns.forEach(b=>b.classList.toggle('active', b.dataset.id===id));
+  homeEl.classList.add('hide');
+  iframe.src = p.url;
+  iframe.style.display = 'block';
 }
 
-/* イベント */
-buttons.forEach(b=>b.addEventListener('click',()=>openPage(b.dataset.id)));
-goHome.addEventListener('click',e=>{ e.preventDefault(); loadHome(); });
-menuBtn?.addEventListener('click', ()=> document.body.classList.contains('drawer-open') ? closeDrawer() : openDrawer());
-backdrop?.addEventListener('click', closeDrawer);
-document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeDrawer(); });
-
-/* 初期表示 */
-(function(){ const m=location.hash.match(/#p=([^&]+)/); m ? openPage(decodeURIComponent(m[1])) : loadHome(); })();
+btnHome.addEventListener('click', showHome);
+btnReload.addEventListener('click', () => {
+  if(iframe.src) iframe.contentWindow.location.reload();
+});
+menuBtns.forEach(b=> b.addEventListener('click', ()=>openPage(b.dataset.id)));
+showHome(); // 初期はホーム
 </script>
 </body>
 </html>
