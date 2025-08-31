@@ -103,6 +103,28 @@
   text-align: center;
 }
 
+/* === 埋め込み先(右ペインの緑ボード)と背景を揃えるための調整 === */
+/* 背景を透過させる */
+html, body {
+  background: transparent !important;
+}
+
+/* もし内側に薄緑のパネルや白いカードがあれば無効化 */
+#panel-quiz, #panel-result,
+.main, .outer, .area, .container {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* 横幅・余白の再調整（必要に応じて） */
+.wrapper, .content, .page, .area {
+  max-width: 1100px !important;   /* 好みで調整 */
+  margin: 0 auto !important;
+  padding: 0 12px !important;
+}
+
+
 </style>
 </head>
 <body>
