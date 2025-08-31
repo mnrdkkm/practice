@@ -40,14 +40,37 @@
     display:grid; grid-template-columns: repeat(2, minmax(180px,1fr));
     gap:14px 18px;
   }
-  .ansBtn{
-    padding:12px 22px; border-radius:14px; border:3px solid var(--line);
-    background: linear-gradient(#2f66a4, #ffffff 65%);
-    color:#111; font-weight:900; letter-spacing:.04em;
-    font-size:clamp(16px,3.6vw,18px); cursor:pointer; transition:.03s transform;
-  }
-  .ansBtn:active{ transform: translateY(1px); }
-  .disabled{ opacity:.6; pointer-events:none }
+
+/* 解答ボタン：上2～3割が青、下は白多め */
+.ansBtn{
+  padding:12px 22px;
+  border-radius:14px;
+  border:3px solid var(--line, #0d4152);
+
+  /* ←比率は 22% が青帯の厚み。好みで 18～30% に調整してOK */
+  background: linear-gradient(
+    180deg,
+    #2f66a4 0%,      /* しっかり青 */
+    #6ea3cf 22%,     /* 青帯の下端（←ここの%を増減） */
+    #eaf3fb 60%,     /* 白へスムーズに */
+    #ffffff 100%
+  );
+
+  color:#0b2530;
+  font-weight:900;
+  letter-spacing:.04em;
+  font-size:clamp(16px,3.6vw,18px);
+  cursor:pointer;
+  transition:.03s transform;
+
+  /* 見栄えを問題エリア寄りに：上ハイライト＋軽い落ち影 */
+  box-shadow:
+    0 8px 14px rgba(0,0,0,.12),
+    inset 0 1px 0 rgba(255,255,255,.85);
+}
+.ansBtn:hover{ filter:brightness(1.05); }
+.ansBtn:active{ transform: translateY(1px); }
+
 
   /* スタート（点棒風） */
   .startRow{ display:flex; justify-content:center; margin-top:18px; margin-bottom:6px; }
