@@ -1,150 +1,107 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ja">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>フラッシュ点数計算</title>
 <style>
-  :root{ --green:#dfeee8; --line:#0c3e47; }
-  *{ box-sizing:border-box; }
-  body{ margin: clamp(8px,2.6vw,16px); font-family: system-ui,-apple-system,"Segoe UI",sans-serif; background: var(--green); color:#111; }
-  h1{ margin:.2em 0 .6em; font-size:clamp(20px,4.4vw,28px); letter-spacing:.08em }
-  .wrap{ max-width: 960px; margin: 0 auto; }
-
-  /* タイトル左端にコンテンツを揃える */
-  #panel-quiz, #panel-result { padding-left: 0; }
-  .qhead { margin-left: 0; }
-
-  /* 枠 */
-  .area{ background:#fff; border:2px solid #cfdcd6; border-radius:12px; padding:14px; }
-
-  /* ヘッダ（第◯問＋バッジ） */
-  .qhead{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin:10px 0 14px; }
-  .qnum{ font-weight:900; font-size:clamp(18px,3.8vw,22px); margin-right:6px; }
-  .badge{
-    padding:12px 18px; border-radius:12px; border:2px solid var(--line);
-    background: linear-gradient(#ffd24e, #ffffff 70%);
-    min-width: 110px; text-align:center; font-weight:800; letter-spacing:.08em;
-    box-shadow: 0 1px 0 rgba(0,0,0,.06);
+  :root{
+    --bg:#114f40;
+    --board:#175c4b;
+    --frame:#0b3b31;
+    --panel-h:56px;
+    --line: rgba(0,0,0,.12);
+  }
+  html,body{margin:0;padding:0;background:#0e4b3e;color:#0e241f;font-family:system-ui, -apple-system, "Segoe UI", Roboto, "ヒラギノ角ゴ ProN", "Hiragino Kaku Gothic ProN", "Noto Sans JP", Meiryo, sans-serif;}
+  .wrap{
+    max-width:1100px;margin:0 auto;padding:24px;
+  }
+  h1{color:#fff;margin:0 0 10px;font-weight:900;letter-spacing:.12em;text-shadow:0 2px 0 #09382e;}
+  /* 外枠 */
+  .stage{
+    background: radial-gradient(1200px 400px at 50% -200px, rgba(255,255,255,.18), transparent 60%) #155a49;
+    border:6px solid #0c4337;border-radius:22px; padding:18px;
+    box-shadow: inset 0 0 0 6px rgba(255,255,255,.06);
   }
 
-  /* 解答レーンとスタートレーンを同寸にして左端に合わせる */
-  .answers, .startRow{
-    inline-size: min(720px, 100%);
-    margin-left: 0;
-    margin-right: auto;
+  /* 上部コントロール */
+  .ctrl-row{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:16px;margin:6px 0 14px;}
+  .chips{display:flex;flex-wrap:wrap;gap:12px;}
+  .chip{
+    min-width:120px; height:54px; padding:0 16px;
+    display:flex;align-items:center;justify-content:center;
+    background:linear-gradient(#ffe8a6,#ffe29a);
+    border:1px solid #e1c468;border-radius:12px;
+    font-weight:800; letter-spacing:.12em;
+    color:#634f05; user-select:none;
   }
+  .ctrl-buttons{display:flex;gap:14px;align-items:center;}
+  .btn{border-radius:16px;padding:14px 30px;font-weight:900;letter-spacing:.2em;font-size:18px;cursor:pointer;transition:transform .02s;}
+  .btn:active{transform:translateY(1px)}
+  .btn-start{background:#117a5d;color:#fff;border:3px solid #0b5b46;box-shadow:0 2px 0 #06382c;}
+  .btn-ghost{background:#fff;border:2px solid #0b5b46;color:#0b5b46;}
+  .btn:disabled{opacity:.45;cursor:not-allowed}
 
-  /* 解答ボタン（角丸／上青→下白） */
-  .answers{
-    display:grid; grid-template-columns: repeat(2, minmax(180px,1fr));
-    gap:14px 18px;
+  /* 出題パネル */
+  .qa-area{background:#0e4b3e33;border:2px solid #0c4337;border-radius:16px;padding:14px 12px;margin:0 0 18px;}
+  .qa-meta{display:flex;align-items:center;gap:8px;color:#dfe; font-weight:800; letter-spacing:.14em; margin:2px 4px 10px}
+  .answers{display:grid;grid-template-columns:repeat(2,minmax(220px,1fr));gap:14px 18px;max-width:900px;margin:0 auto 6px;transition:opacity .18s}
+  .ansBtn{
+    padding:16px 22px;border-radius:14px;border:3px solid rgba(0,0,0,.25);
+    background: linear-gradient(#2f66a4 0%, #d5e6f7 55%, #ffffff 100%);
+    color:#111;font-weight:900;letter-spacing:.04em;font-size:20px;cursor:pointer;transition:transform .03s;
   }
+  .ansBtn:active{transform:translateY(1px)}
+  .disabled{opacity:.6;pointer-events:none}
 
-/* 解答ボタン：上2～3割が青、下は白多め */
-.ansBtn{
-  padding:12px 22px;
-  border-radius:14px;
-  border:3px solid var(--line, #0d4152);
+  /* 見出し */
+  .panel{background:#f7fbfa;border-radius:18px;border:1px solid rgba(0,0,0,.15);overflow:hidden}
+  .grid-panels{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media (max-width:960px){ .grid-panels{grid-template-columns:1fr} }
+  .panel-hd{min-height:var(--panel-h);display:flex;align-items:center;gap:10px;padding:10px 16px;font-weight:900;letter-spacing:.2em}
+  .panel-qa .panel-hd{background:linear-gradient(#ffefb9,#fdeea2)}
+  .panel-judge .panel-hd{background:linear-gradient(#e9f3ff,#ddeefe)}
+  .panel-bd{padding:10px 14px 14px;background:#fff}
 
-  /* ←比率は 22% が青帯の厚み。好みで 18～30% に調整してOK */
-  background: linear-gradient(
-    180deg,
-    #2f66a4 0%,      /* しっかり青 */
-    #6ea3cf 22%,     /* 青帯の下端（←ここの%を増減） */
-    #eaf3fb 60%,     /* 白へスムーズに */
-    #ffffff 100%
-  );
+  /* テーブル */
+  table{width:100%;border-collapse:separate;border-spacing:0}
+  th,td{padding:10px 12px}
+  thead th{color:#222;font-weight:800}
 
-  color:#0b2530;
-  font-weight:900;
-  letter-spacing:.04em;
-  font-size:clamp(16px,3.6vw,18px);
-  cursor:pointer;
-  transition:.03s transform;
+  tbody tr{border-top:1px solid var(--line)}
+  .qaTab th, .qaTab td{text-align:center}
+  .jgTab td{vertical-align:middle}
+  .jgTab td.sel, .jgTab td.ans{text-align:left}
+  .right{ text-align:right }
 
-  /* 見栄えを問題エリア寄りに：上ハイライト＋軽い落ち影 */
-  box-shadow:
-    0 8px 14px rgba(0,0,0,.12),
-    inset 0 1px 0 rgba(255,255,255,.85);
-}
-.ansBtn:hover{ filter:brightness(1.05); }
-.ansBtn:active{ transform: translateY(1px); }
-
-
-  /* スタート（点棒風） */
-  .startRow{ display:flex; justify-content:center; margin-top:18px; margin-bottom:6px; }
-  .startBtn{
-    position:relative; display:inline-block;
-    padding:16px 28px; border-radius:14px; background:#fff; border:4px solid #222;
-    min-width: 280px; text-align:center; font-size:clamp(18px,4.6vw,22px);
-    cursor:pointer; font-weight:900; letter-spacing:.25em; color:#b40000;
+  /* ○× */
+  .mark{display:inline-block;width:22px;height:22px;vertical-align:middle;position:relative}
+  .ok{border:3px solid #1e73d4;border-radius:50%;box-shadow:0 0 0 2px #fff inset}
+  .ng::before,.ng::after{
+    content:"";position:absolute;left:2px;right:2px;top:50%;border-top:3px solid #d53a3a;box-shadow:0 0 0 2px #fff inset
   }
-  .startBtn::before{
-    content:""; position:absolute; left:12px; right:12px; top:6px; height:8px; border-radius:8px; background:rgba(0,0,0,.12);
-  }
-  .stick-100   { background:#fff;    color:#111;  border-color:#333; }
-  .stick-500   { background:#0e7d5b; color:#fff; }
-  .stick-1000  { background:#2e6bd1; color:#fff; }
-  .stick-5000  { background:#f1c40f; color:#333; }
-  .stick-10000 { background:#d4472f; color:#fff; }
-  .stick-100::before   { background:radial-gradient(#111 3px, transparent 4px) 50% 50%/18px 8px repeat-x; }
-  .stick-500::before   { background:radial-gradient(#fff 2px, transparent 3px) 50% 50%/14px 8px repeat-x; }
-  .stick-1000::before  { background:radial-gradient(#fff 3px, transparent 4px) 50% 50%/22px 8px repeat-x; }
-  .stick-5000::before  { background:radial-gradient(#333 3px, transparent 4px) 50% 50%/18px 8px repeat-x; }
-  .stick-10000::before { background:radial-gradient(#fff 3px, transparent 4px) 50% 50%/22px 8px repeat-x; }
+  .ng::before{transform:translateY(-50%) rotate(45deg)}
+  .ng::after{transform:translateY(-50%) rotate(-45deg)}
 
-  /* 結果表 */
-  .resultWrap{ display:grid; grid-template-columns: 1.1fr 1.2fr; gap:16px; }
-  .btnRow{ margin:8px 0 12px; }
-  .again{ padding:10px 14px; border:2px solid var(--line); border-radius:10px; background:#fff; font-weight:800; }
-  table{ width:100%; border-collapse:collapse; }
-  th, td{ border:1px solid #999; padding:8px 10px; font-weight:800; text-align:center; }
-  th{ background:#f7f7f7 }
-  .colSmall{ width:64px }
-  .markOk{ color:#0b7d00; font-weight:900 }
-  .markNg{ color:#c0002b; font-weight:900 }
-  .hide{ display:none !important; }
+  .muted{color:#567}
+  .note{font-size:12px;color:#567;margin-top:4px}
 
-  @media (max-width:720px){
-    .answers{ grid-template-columns: 1fr; }
-    .resultWrap{ grid-template-columns: 1fr; }
-  } /* ← 閉じ忘れ注意 */
-
-/* 正誤判定テーブルの点数表示を左寄せ */
-#tblA th:nth-child(2),
-#tblA th:nth-child(3),
-#tblA td:nth-child(2),
-#tblA td:nth-child(3){
-  text-align: left;
-  padding-left: 12px;   /* お好みで調整 */
+/* --- 横線をくっきり表示（問題/正誤判定 共通） --- */
+.qaTab tbody tr+tr td,
+.jgTab tbody tr+tr td{
+  border-top: 2px solid rgba(15, 36, 42, .28); /* 線の色/濃さはここで調整 */
 }
 
-/* 1列目（◯/✕）は中央寄せのまま */
-#tblA td:first-child,
-#tblA th:first-child{
-  text-align: center;
+/* 1行目は線なし（念のため） */
+.qaTab tbody tr:first-child td,
+.jgTab tbody tr:first-child td{
+  border-top: none;
 }
 
-/* === 埋め込み先(右ペインの緑ボード)と背景を揃えるための調整 === */
-/* 背景を透過させる */
-html, body {
-  background: transparent !important;
-}
-
-/* もし内側に薄緑のパネルや白いカードがあれば無効化 */
-#panel-quiz, #panel-result,
-.main, .outer, .area, .container {
-  background: transparent !important;
-  border: none !important;
-  box-shadow: none !important;
-}
-
-/* 横幅・余白の再調整（必要に応じて） */
-.wrapper, .content, .page, .area {
-  max-width: 1100px !important;   /* 好みで調整 */
-  margin: 0 auto !important;
-  padding: 0 12px !important;
+/* 行の高さが詰まりすぎるときは少し余白を追加 */
+.qaTab td, .jgTab td{
+  padding-top: 10px;
+  padding-bottom: 10px;
 }
 
 
@@ -153,247 +110,314 @@ html, body {
 <body>
 <div class="wrap">
   <h1>フラッシュ点数計算</h1>
-
-  <!-- 出題パネル -->
-  <section id="panel-quiz" class="area">
-    <div class="qhead">
-      <div id="qnum" class="qnum">第①問</div>
-      <div id="bd-oya"  class="badge">親／子</div>
-      <div id="bd-type" class="badge">ツモ／ロン</div>
-      <div id="bd-fu"   class="badge">符</div>
-      <div id="bd-han"  class="badge">翻</div>
-    </div>
-
-    <div class="answers">
-      <button class="ansBtn" data-idx="0">点数A</button>
-      <button class="ansBtn" data-idx="1">点数B</button>
-      <button class="ansBtn" data-idx="2">点数C</button>
-      <button class="ansBtn" data-idx="3">点数D</button>
-    </div>
-
-    <div class="startRow"><button id="btnStart" class="startBtn">スタート</button></div>
-  </section>
-
-  <!-- 結果パネル -->
-  <section id="panel-result" class="area hide">
-    <div class="btnRow"><button id="btnAgain" class="again">もう１回挑戦</button></div>
-    <div class="resultWrap">
-      <div>
-        <table>
-          <thead>
-            <tr><th colspan="5">問題</th></tr>
-            <tr>
-              <th class="colSmall">No.</th>
-              <th>親/子</th>
-              <th>ツモ/ロン</th>
-              <th>符</th>
-              <th>翻</th>
-            </tr>
-          </thead>
-          <tbody id="tblQ"></tbody>
-        </table>
+  <div class="stage">
+    <!-- 上部操作 -->
+    <div class="ctrl-row">
+      <div class="chips" id="chips">
+        <span class="chip" id="chip-parent">親／子</span>
+        <span class="chip" id="chip-tr">ツモ／ロン</span>
+        <span class="chip" id="chip-fu">符</span>
+        <span class="chip" id="chip-han">翻</span>
       </div>
-      <div>
-        <table>
-          <thead>
-            <tr><th colspan="3">正誤判定</th></tr>
-            <tr><th class="colSmall">正誤</th><th>あなたの選択</th><th>正解</th></tr>
-          </thead>
-          <tbody id="tblA"></tbody>
-        </table>
+      <div class="ctrl-buttons">
+        <button class="btn btn-start" id="btnStart">スタート</button>
+        <button class="btn btn-ghost" id="btnReset">↺ やり直し</button>
       </div>
     </div>
-  </section>
+
+    <!-- 出題表示 -->
+    <div class="qa-area" id="qaArea" hidden>
+      <div class="qa-meta" id="qMeta">第<span id="qNo">01</span>問</div>
+      <div class="answers" id="answers"></div>
+    </div>
+
+    <!-- 結果 -->
+    <div class="grid-panels" id="resultWrap" hidden>
+      <section class="panel panel-qa">
+        <div class="panel-hd">問題</div>
+        <div class="panel-bd">
+          <table class="qaTab">
+            <thead>
+            <tr><th>No.</th><th>親／子</th><th>ツモ／ロン</th><th>符</th><th>翻</th></tr>
+            </thead>
+            <tbody id="qaTbody"></tbody>
+          </table>
+        </div>
+      </section>
+      <section class="panel panel-judge">
+        <div class="panel-hd">正誤判定</div>
+        <div class="panel-bd">
+          <table class="jgTab">
+            <thead>
+            <tr><th>正誤</th><th>あなたの選択</th><th>正解</th></tr>
+            </thead>
+            <tbody id="jgTbody"></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  </div>
 </div>
 
 <script>
 (() => {
-  /* ========= 点数計算 ========= */
-  const FU_CAND  = [20,25,30,40,50,60];
-  const ceil100 = n => Math.ceil(n/100)*100;
+  "use strict";
 
-  // 上限名とレベル（0..4）
-  function getLimitLevel(fu, han){
-    if (han >= 13) return {name:'役満',   lv:4};
-    if (han >= 11) return {name:'三倍満', lv:3};
-    if (han >= 8 ) return {name:'倍満',   lv:2};
-    if (han >= 6 ) return {name:'跳満',   lv:1};
-    if (han >= 5 || (han===4 && fu>=40) || (han===3 && fu>=70)) return {name:'満貫', lv:0};
-    return null;
-  }
-  // 通常（非上限）
-  function normalPoints(oya, type, fu, han){
-    const base = fu * Math.pow(2, han + 2);
-    if (type === 'ロン'){
-      return (oya === '親') ? String(ceil100(6 * base)) : String(ceil100(4 * base));
-    }else{ // ツモ
-      if (oya === '親'){
-        const all = ceil100(2 * base);
-        return `${all}オール`;
+  // ---------- utilities ----------
+  const rand = (n)=> Math.floor(Math.random()*n);
+  const choice = (arr)=> arr[rand(arr.length)];
+  const ceil100 = (x)=> Math.ceil(x/100)*100;
+
+  // Mahjong calc
+  function calcPoint({isParent, isTsumo, fu, han}){
+    // base point
+    // limit check
+    let limit = null; // '満貫' etc
+    let base = fu * Math.pow(2, han + 2); // 基本点
+    if (han >= 13)       { limit='役満';  }
+    else if (han >= 11)  { limit='三倍満';}
+    else if (han >= 8)   { limit='倍満';  }
+    else if (han >= 6)   { limit='跳満';  }
+    else if (han >= 5)   { limit='満貫';  }
+    else if (base >= 2000){ limit='満貫'; }
+
+    // limit payments table
+    const limRon   = isParent?  {満貫:12000, 跳満:18000, 倍満:24000, 三倍満:36000, 役満:48000}
+                              : {満貫: 8000, 跳満:12000, 倍満:16000, 三倍満:24000, 役満:32000};
+    const limTAll  =           {満貫: 4000, 跳満: 6000, 倍満: 8000, 三倍満:12000, 役満:16000}; // 親ツモ オール
+    const limChild =           {満貫:[2000,4000], 跳満:[3000,6000], 倍満:[4000,8000], 三倍満:[6000,12000], 役満:[8000,16000]}; // 子ツモ [子,親]
+
+    let disp='', norm='', suffix='';
+    if (limit){
+      suffix = `（${limit}）`;
+      if (!isTsumo){
+        const v = limRon[limit];
+        disp = String(v); norm = disp;
       }else{
-        const non = ceil100(1 * base);
-        const oyaP = ceil100(2 * base);
-        return `${non}/${oyaP}`;
+        if (isParent){
+          const pay = limTAll[limit];
+          disp = `${pay}オール`; norm = disp;
+        }else{
+          const [c,p] = limChild[limit];
+          disp = `${c*1000/1000}/${p*1000/1000}`; // 2000/4000 など
+          disp = `${c}/${p}`; norm = disp;
+        }
       }
+      return {disp, norm, suffix, limit};
     }
-  }
-  // 上限
-  function limitPoints(oya, type, lv, withName=true){
-    const names = ['満貫','跳満','倍満','三倍満','役満'];
-    const nonChild = [2000,3000,4000, 6000, 8000];
-    const oyaPay   = [4000,6000,8000,12000,16000];
-    const childRon = [8000,12000,16000,24000,32000];
-    const oyaRon   = [12000,18000,24000,36000,48000];
 
-    let text;
-    if (type==='ツモ'){
-      if (oya==='親'){
-        text = `${oyaPay[lv]}オール`;
-      }else{
-        text = `${nonChild[lv]}/${oyaPay[lv]}`;
-      }
+    // 非満貫
+    if (!isTsumo){
+      const ron = isParent ? ceil100(base*6) : ceil100(base*4);
+      disp = String(ron); norm = disp;
     }else{
-      text = (oya==='親') ? String(oyaRon[lv]) : String(childRon[lv]);
+      if (isParent){
+        const all = ceil100(base*2);
+        disp = `${all}オール`; norm = disp;
+      }else{
+        const ko = ceil100(base);      // 子支払い
+        const oya = ceil100(base*2);   // 親支払い
+        disp = `${ko}/${oya}`; norm = disp;
+      }
     }
-    return withName ? `${text}（${names[lv]}）` : text;
-  }
-  // withName：出題時は false（カッコ無し）／結果表示は true（カッコ付き）
-  function computeAnswer(oya, type, fu, han, withName=true){
-    const lim = getLimitLevel(fu, han);
-    if (lim) return limitPoints(oya, type, lim.lv, withName);
-    return normalPoints(oya, type, fu, han);
+    return {disp, norm, suffix, limit:null};
   }
 
-  /* ========= DOM & 状態 ========= */
-  const panelQuiz   = document.getElementById('panel-quiz');
-  const panelResult = document.getElementById('panel-result');
-  const qnumEl = document.getElementById('qnum');
-  const bdOya  = document.getElementById('bd-oya');
-  const bdType = document.getElementById('bd-type');
-  const bdFu   = document.getElementById('bd-fu');
-  const bdHan  = document.getElementById('bd-han');
-  const btnStart= document.getElementById('btnStart');
-  const ansBtns = [...document.querySelectorAll('.ansBtn')];
-  const tblQ = document.getElementById('tblQ');
-  const tblA = document.getElementById('tblA');
-  const btnAgain = document.getElementById('btnAgain');
+  // distractors generator
+  function genDistractors(ans, meta){
+    const set = new Set([ans.norm]);
+    const list = [];
+    const push = (s)=>{ if(!set.has(s)){ set.add(s); list.push(s);} };
 
-  const TOTAL = 10;
-  let qIndex = 0, playing = false, current = null;
-  const history = [];
+    // 近傍の誤答を作る
+    const vary = ()=>{
+      const {isParent,isTsumo} = meta;
+      if (!isTsumo){
+        // ron single number
+        let v = parseInt(ans.norm,10);
+        const delta = [100,200,300,400,500][rand(5)];
+        const s1 = String(v + delta);
+        const s2 = String(Math.max(1000, v - delta));
+        push(s1); push(s2);
+      }else if(isParent){
+        // parent tsumo Xオール
+        const m = ans.norm.match(/^(\d+)オール$/);
+        if (m){
+          const x = parseInt(m[1],10);
+          push(`${x+200}オール`);
+          push(`${Math.max(200,x-200)}オール`);
+        }
+      }else{
+        // child tsumo a/b
+        const m = ans.norm.match(/^(\d+)\/(\d+)$/);
+        if (m){
+          let a = parseInt(m[1],10), b = parseInt(m[2],10);
+          push(`${a+100}/${b+200}`);
+          push(`${Math.max(100,a-100)}/${Math.max(200,b-200)}`);
+        }
+      }
+    };
+    vary();
 
-  const rand = n => Math.floor(Math.random()*n);
-  const choice = arr => arr[rand(arr.length)];
-  // 低翻を出やすくする
-  const HAN_POOL = [1,1,1,1,2,2,2,3,3,3,4,4,5,6,7,8,9,10,11,12,13];
-  const toCircled = n => String.fromCodePoint('①'.codePointAt(0) + (n-1));
-  const formatQnum = i => `第${toCircled(i+1)}問`;
-
-  // ロンは20符を除外
-  function generateOne(oya, type, withName){
-    const fuPool = (type==='ロン') ? [25,30,40,50,60] : FU_CAND;
-    const fu  = choice(fuPool);
-    const han = choice(HAN_POOL);
-    const ans = computeAnswer(oya, type, fu, han, withName);
-    return {fu, han, ans};
-  }
-
-  function generateQuestion(){
-    const oya  = Math.random()<0.5 ? '親':'子';
-    const type = Math.random()<0.5 ? 'ツモ':'ロン';
-
-    // 出題用（括弧なし）と結果用（括弧あり）を分けて生成
-    const baseDisp = generateOne(oya, type, false);   // 例：3000/6000
-    const correctResult = computeAnswer(oya, type, baseDisp.fu, baseDisp.han, true); // 例：3000/6000（跳満）
-    const correctDisplay = baseDisp.ans;
-
-    // ダミーは出題用フォーマット（括弧なし）
-    const pool = new Set();
-    while(pool.size < 3){
-      const cand = generateOne(oya, type, false).ans;
-      if (cand !== correctDisplay) pool.add(cand);
+    // 型違いのひっかけ
+    if (meta.isTsumo && !meta.isParent){
+      push(ans.norm.replace('/','／'));
+      push(`${ans.norm.split('/')[1]}オール`);
+    }else if(meta.isTsumo && meta.isParent){
+      push(ans.norm.replace('オール',' オール'));
+      push(ans.norm.replace('オール',''));
+    }else{
+      push(String(parseInt(ans.norm,10)+700));
+      push(`${ans.norm}点`);
     }
-    const choices = [correctDisplay, ...pool];
-    for(let i=choices.length-1;i>0;i--){ const j=rand(i+1); [choices[i],choices[j]]=[choices[j],choices[i]]; }
-    const correctIdx = choices.indexOf(correctDisplay);
 
-    return { oya, type, fu: baseDisp.fu, han: baseDisp.han, choices, correctIdx, correct: correctResult };
+    // 3つに制限
+    while(list.length>3) list.splice(rand(list.length),1);
+    return list.slice(0,3);
   }
 
-  function renderQuestion(){
-    const q = current;
-    qnumEl.textContent = formatQnum(qIndex);
-    bdOya.textContent  = q.oya;
-    bdType.textContent = q.type;
-    bdFu.textContent   = `${q.fu}符`;
-    bdHan.textContent  = `${q.han}翻`;
-    ansBtns.forEach((b,i)=>{ b.textContent = q.choices[i]; b.classList.remove('disabled'); });
+  // ---------- game state ----------
+  const MAXQ = 10;
+  let qIndex = 0;
+  const history = []; // {meta, disp, ans, ok}
+
+  const $ = (sel)=> document.querySelector(sel);
+
+  const chips = {
+    parent: $('#chip-parent'),
+    tr:     $('#chip-tr'),
+    fu:     $('#chip-fu'),
+    han:    $('#chip-han'),
+  };
+  const qaArea   = $('#qaArea');
+  const answers  = $('#answers');
+  const resultWrap = $('#resultWrap');
+  const qaTbody  = $('#qaTbody');
+  const jgTbody  = $('#jgTbody');
+
+  // ---------- question generation ----------
+  function nextMeta(){
+    const isParent = !!rand(2);          // 親:1 子:0
+    const isTsumo  = !!rand(2);          // ツモ:1 ロン:0
+    let fuCand = [20,25,30,40,50,60,70,80,90,110];
+    // ロンで20符は不可
+    let fu = choice(fuCand);
+    if (!isTsumo && fu===20) fu = 30;
+
+    // たまに大きめ符
+    if (rand(12)===0) fu = choice([90,110]);
+
+    const han = choice([1,2,3,4,5,6,7,8,9,10,11,12,13]);
+
+    return {isParent,isTsumo,fu,han};
   }
 
-  function startGame(){
-    history.length = 0; qIndex = 0; playing = true;
-    btnStart.classList.add('hide');
-    randomizeStick();  // 次回のため色だけ先に決めておく
-    current = generateQuestion(); renderQuestion();
+  function metaLabel(m){
+    return {
+      parent: m.isParent? '親':'子',
+      tr:     m.isTsumo? 'ツモ':'ロン',
+      fu:     `${m.fu}符`,
+      han:    `${m.han}翻`,
+    };
   }
 
-  function answer(i){
-    if(!playing) return;
-    const q = current;
-    const ok = (i === q.correctIdx);
-    history.push({
-      no:qIndex+1, oya:q.oya, type:q.type, fu:q.fu, han:q.han,
-      correct:q.correct,      // ← 結果用：括弧あり
-      choice:q.choices[i],    // ← 選択肢：括弧なし
-      ok
+  function buildChoices(meta){
+    const ans  = calcPoint(meta);
+    const dums = genDistractors(ans, meta);
+    const all  = [ans.norm, ...dums];
+    // shuffle
+    for(let i=all.length-1;i>0;i--){
+      const j = rand(i+1); const t=all[i]; all[i]=all[j]; all[j]=t;
+    }
+    // 表示文字列は ans.norm と同じフォーマット
+    return {correct: ans, options: all};
+  }
+
+  function setChips(meta){
+    const lab = metaLabel(meta);
+    chips.parent.textContent = lab.parent;
+    chips.tr.textContent     = lab.tr;
+    chips.fu.textContent     = lab.fu;
+    chips.han.textContent    = lab.han;
+  }
+
+  function drawQuestion(){
+    if (qIndex>=MAXQ){ showResult(); return; }
+
+    qaArea.hidden = false;
+    resultWrap.hidden = true;
+
+    const meta = nextMeta();
+    setChips(meta);
+
+    const {correct, options} = buildChoices(meta);
+    answers.innerHTML = '';
+    options.forEach(txt=>{
+      const b = document.createElement('button');
+      b.className='ansBtn';
+      b.textContent = txt;
+      b.addEventListener('click', ()=>{
+        const ok = (txt===correct.norm);
+        history.push({meta, sel:txt, ans:correct.disp+(correct.suffix||''), ok});
+        // 軽いフェードで次へ
+        answers.style.opacity='0';
+        setTimeout(()=>{
+          answers.style.opacity='1';
+          qIndex++;
+          drawQuestion();
+        },180);
+      });
+      answers.appendChild(b);
     });
-    qIndex++;
-    if(qIndex>=TOTAL){ playing=false; showResult(); return; }
-    current = generateQuestion(); renderQuestion();
   }
 
-  /* ==== 結果表示（符/翻は別カラム） ==== */
+  // ---------- result ----------
   function showResult(){
-    tblQ.innerHTML=''; tblA.innerHTML='';
-    history.forEach(h=>{
-      const trQ = document.createElement('tr');
-      trQ.innerHTML = `
-        <td>${toCircled(h.no)}</td>
-        <td>${h.oya}</td>
-        <td>${h.type}</td>
-        <td>${h.fu}</td>
-        <td>${h.han}</td>`;
-      tblQ.appendChild(trQ);
+    qaArea.hidden = true;
+    resultWrap.hidden = false;
 
-      const trA = document.createElement('tr');
-      trA.innerHTML = `<td class="${h.ok?'markOk':'markNg'}">${h.ok?'◯':'✕'}</td><td>${h.choice}</td><td>${h.correct}</td>`;
-      tblA.appendChild(trA);
+    // 表クリア
+    qaTbody.innerHTML=''; jgTbody.innerHTML='';
+
+    history.forEach((h,i)=>{
+      const lab = metaLabel(h.meta);
+      const tr1 = document.createElement('tr');
+      tr1.innerHTML = `<td>${String(i+1).padStart(2,'0')}</td><td>${lab.parent}</td><td>${lab.tr}</td><td>${lab.fu}</td><td>${lab.han}</td>`;
+      qaTbody.appendChild(tr1);
+
+      const tr2 = document.createElement('tr');
+      const mark = `<span class="mark ${h.ok?'ok':'ng'}"></span>`;
+      tr2.innerHTML = `<td>${mark}</td><td class="sel">${h.sel}</td><td class="ans">${h.ans}</td>`;
+      jgTbody.appendChild(tr2);
     });
-    panelQuiz.classList.add('hide'); panelResult.classList.remove('hide');
   }
 
-  function randomizeStick(){
-    const sticks = ['stick-100','stick-500','stick-1000','stick-5000','stick-10000'];
-    const btn = document.getElementById('btnStart');
-    btn.classList.remove(...sticks);
-    btn.classList.add(sticks[Math.floor(Math.random()*sticks.length)]);
-  }
-  function reset(){
-    panelResult.classList.add('hide'); panelQuiz.classList.remove('hide');
-    btnStart.classList.remove('hide'); ansBtns.forEach(b=> b.classList.add('disabled'));
-    qnumEl.textContent = formatQnum(0);
-    bdOya.textContent  = '親／子';
-    bdType.textContent = 'ツモ／ロン';
-    bdFu.textContent   = '符';
-    bdHan.textContent  = '翻';
-    randomizeStick();
+  // ---------- controls ----------
+  function renderInitView(){
+    // 初期ラベル
+    chips.parent.textContent='親／子';
+    chips.tr.textContent='ツモ／ロン';
+    chips.fu.textContent='符';
+    chips.han.textContent='翻';
+
+    qIndex=0; history.length=0;
+    answers.innerHTML='';
+    qaArea.hidden = true;
+    resultWrap.hidden = true;
   }
 
-  btnStart.addEventListener('click', startGame);
-  ansBtns.forEach((b,i)=> b.addEventListener('click', ()=>answer(i)));
-  btnAgain.addEventListener('click', reset);
-  ansBtns.forEach(b=> b.classList.add('disabled'));
-  reset();
+  document.getElementById('btnStart').addEventListener('click', ()=>{
+    renderInitView();
+    qaArea.hidden=false;
+    drawQuestion();
+  });
+
+  document.getElementById('btnReset').addEventListener('click', ()=>{
+    renderInitView();
+  });
+
+  // 初期
+  renderInitView();
 })();
 </script>
 </body>
