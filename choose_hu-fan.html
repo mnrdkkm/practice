@@ -148,8 +148,8 @@ window.addEventListener('error', function (e) {
   </div>
 
   <div class="switchTabs">
-    <button id="tabMemo"  class="tab active">役メモ</button>
-    <button id="tabScore" class="tab">点数表</button>
+<button id="tabScore" class="tab active">点数表</button>
+<button id="tabMemo"  class="tab">役メモ</button>
   </div>
 
   <div id="panelMemo">
@@ -373,6 +373,41 @@ window.addEventListener('error', function (e) {
 
   function sumArr(a){ return a.reduce((x,y)=>x+y,0); }
 
+// --- 混全帯么九／純全帯么九の判定ヘルパー -------------------
+const isHonor   = t => t.suit === 'z';
+const isTerm    = t => !isHonor(t) && (t.num === 1 || t.num === 9);
+
+// 面子が順子123 または 789 か
+function isChow123or789(m){
+  return m.type === 'shuntsu' && (m.low === 1 || m.low === 7);
+}
+
+// d: 分解 { groups:[{type:'shuntsu'|'koutsu'|'kantsu'|'pair', suit, low, tile/eyes }], menzen:boolean }
+function judgeChanta(d){
+  const gs = d.groups;
+
+  // 順子が1つも無ければチャンタ系は不可（ホン老頭の可能性）
+  if (!gs.some(g => g.type === 'shuntsu')) return { chanta:false, junchan:false };
+
+  // すべてのブロックが「端(1/9)か字牌」を含んでいるか
+  const everyOK = gs.every(g => {
+    if (g.type === 'shuntsu') return isChow123or789(g);   // 123 or 789 の順子のみOK
+    const t = g.tile || g.eyes;                            // 刻子/槓子/雀頭の代表牌
+    return isHonor(t) || isTerm(t);
+  });
+  if (!everyOK) return { chanta:false, junchan:false };
+
+  // 字牌の有無で純チャン/チャンタを分岐
+  const hasHonorTile = gs.some(g => {
+    if (g.type === 'shuntsu') return false;
+    const t = g.tile || g.eyes;
+    return isHonor(t);
+  });
+
+  return { chanta:true, junchan:!hasHonorTile };
+}
+
+
   function evaluateDecomposition(d, base13, full, context){
     const {isMenzen, winType, bakaze, jikaze, isRiichi, dora} = context;
     const yaku=[]; let hanYaku=0, doraHan=0; const fuItems=[]; let fu=20; let autoRiichi=false;
@@ -405,6 +440,16 @@ window.addEventListener('error', function (e) {
     if(!usesHonor && !has19){ hanYaku++; yaku.push('断么九'); }
 
     if(isMenzen){ const pairs=countPeikouPairsFromMelds(d.melds); if(pairs>=2){ hanYaku+=3; yaku.push('二盃口'); } else if(pairs===1){ hanYaku+=1; yaku.push('一盃口'); } }
+
+// --- 混全帯么九／純全帯么九 ---
+{
+  const { chanta, junchan } = judgeChanta(decomp);
+  if (junchan) {
+    addYaku('純全帯么九', decomp.menzen ? 3 : 2);
+  } else if (chanta) {
+    addYaku('混全帯么九', decomp.menzen ? 2 : 1);
+  }
+}
 
     // 三色同順（厳密）
     {

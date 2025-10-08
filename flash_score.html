@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>フラッシュ点数計算</title>
+<title>フラッシュ点数計算（統合テーブル版）</title>
 <style>
   :root{
     --bg:#114f40;
@@ -13,10 +13,9 @@
     --line: rgba(0,0,0,.12);
   }
   html,body{margin:0;padding:0;background:#0e4b3e;color:#0e241f;font-family:system-ui, -apple-system, "Segoe UI", Roboto, "ヒラギノ角ゴ ProN", "Hiragino Kaku Gothic ProN", "Noto Sans JP", Meiryo, sans-serif;}
-  .wrap{
-    max-width:1100px;margin:0 auto;padding:24px;
-  }
+  .wrap{max-width:1100px;margin:0 auto;padding:24px;}
   h1{color:#fff;margin:0 0 10px;font-weight:900;letter-spacing:.12em;text-shadow:0 2px 0 #09382e;}
+
   /* 外枠 */
   .stage{
     background: radial-gradient(1200px 400px at 50% -200px, rgba(255,255,255,.18), transparent 60%) #155a49;
@@ -52,29 +51,27 @@
     color:#111;font-weight:900;letter-spacing:.04em;font-size:20px;cursor:pointer;transition:transform .03s;
   }
   .ansBtn:active{transform:translateY(1px)}
-  .disabled{opacity:.6;pointer-events:none}
 
-  /* 見出し */
+  /* パネル */
   .panel{background:#f7fbfa;border-radius:18px;border:1px solid rgba(0,0,0,.15);overflow:hidden}
-  .grid-panels{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-  @media (max-width:960px){ .grid-panels{grid-template-columns:1fr} }
-  .panel-hd{min-height:var(--panel-h);display:flex;align-items:center;gap:10px;padding:10px 16px;font-weight:900;letter-spacing:.2em}
-  .panel-qa .panel-hd{background:linear-gradient(#ffefb9,#fdeea2)}
-  .panel-judge .panel-hd{background:linear-gradient(#e9f3ff,#ddeefe)}
+  .panel-hd{min-height:var(--panel-h);display:flex;align-items:center;gap:10px;padding:10px 16px;font-weight:900;letter-spacing:.2em;background:linear-gradient(#ffefb9,#fdeea2)}
   .panel-bd{padding:10px 14px 14px;background:#fff}
 
-  /* テーブル */
+  /* 統合テーブル */
   table{width:100%;border-collapse:separate;border-spacing:0}
-  th,td{padding:10px 12px}
+  th,td{padding:10px 12px;text-align:center}
   thead th{color:#222;font-weight:800}
-
   tbody tr{border-top:1px solid var(--line)}
-  .qaTab th, .qaTab td{text-align:center}
-  .jgTab td{vertical-align:middle}
-  .jgTab td.sel, .jgTab td.ans{text-align:left}
-  .right{ text-align:right }
 
-  /* ○× */
+  /* 左右見出し（1列ヘッダー） */
+  .qaJudgeTab thead .left-head{background:#ffefb9;border-right:2px solid #0e4b3e22}
+  .qaJudgeTab thead .right-head{background:#4D9DFF;border-left:2px solid #0e4b3e22}
+
+  /* 列幅：No/マーク列を揃える */
+  .col-no{width:64px;font-weight:800}
+  .col-mark{width:64px}
+
+  /* ○×マーク（既存デザイン踏襲） */
   .mark{display:inline-block;width:22px;height:22px;vertical-align:middle;position:relative}
   .ok{border:3px solid #1e73d4;border-radius:50%;box-shadow:0 0 0 2px #fff inset}
   .ng::before,.ng::after{
@@ -83,28 +80,11 @@
   .ng::before{transform:translateY(-50%) rotate(45deg)}
   .ng::after{transform:translateY(-50%) rotate(-45deg)}
 
-  .muted{color:#567}
-  .note{font-size:12px;color:#567;margin-top:4px}
+  /* 行の横線をくっきり */
+  .qaJudgeTab tbody tr+tr td{ border-top: 2px solid rgba(15, 36, 42, .28); }
 
-/* --- 横線をくっきり表示（問題/正誤判定 共通） --- */
-.qaTab tbody tr+tr td,
-.jgTab tbody tr+tr td{
-  border-top: 2px solid rgba(15, 36, 42, .28); /* 線の色/濃さはここで調整 */
-}
-
-/* 1行目は線なし（念のため） */
-.qaTab tbody tr:first-child td,
-.jgTab tbody tr:first-child td{
-  border-top: none;
-}
-
-/* 行の高さが詰まりすぎるときは少し余白を追加 */
-.qaTab td, .jgTab td{
-  padding-top: 10px;
-  padding-bottom: 10px;
-}
-
-
+  /* スマホ時：回答ボタン1列 */
+  @media (max-width:560px){ .answers{grid-template-columns:1fr} }
 </style>
 </head>
 <body>
@@ -131,31 +111,31 @@
       <div class="answers" id="answers"></div>
     </div>
 
-    <!-- 結果 -->
-    <div class="grid-panels" id="resultWrap" hidden>
-      <section class="panel panel-qa">
-        <div class="panel-hd">問題</div>
-        <div class="panel-bd">
-          <table class="qaTab">
-            <thead>
-            <tr><th>No.</th><th>親／子</th><th>ツモ／ロン</th><th>符</th><th>翻</th></tr>
-            </thead>
-            <tbody id="qaTbody"></tbody>
-          </table>
-        </div>
-      </section>
-      <section class="panel panel-judge">
-        <div class="panel-hd">正誤判定</div>
-        <div class="panel-bd">
-          <table class="jgTab">
-            <thead>
-            <tr><th>正誤</th><th>あなたの選択</th><th>正解</th></tr>
-            </thead>
-            <tbody id="jgTbody"></tbody>
-          </table>
-        </div>
-      </section>
-    </div>
+    <!-- 結果（1つの表） -->
+    <section class="panel" id="resultWrap" hidden>
+      <div class="panel-hd">結果</div>
+      <div class="panel-bd">
+        <table class="qaJudgeTab">
+          <thead>
+            <tr>
+              <th colspan="5" class="left-head">問題</th>
+              <th colspan="3" class="right-head">正誤判定</th>
+            </tr>
+            <tr>
+              <th class="col-no">No.</th>
+              <th>親／子</th>
+              <th>ツモ／ロン</th>
+              <th>符</th>
+              <th>翻</th>
+              <th class="col-mark">正誤</th>
+              <th>あなたの選択</th>
+              <th>正解</th>
+            </tr>
+          </thead>
+          <tbody id="oneTbody"></tbody>
+        </table>
+      </div>
+    </section>
   </div>
 </div>
 
@@ -168,11 +148,177 @@
   const choice = (arr)=> arr[rand(arr.length)];
   const ceil100 = (x)=> Math.ceil(x/100)*100;
 
-  // Mahjong calc
+  // ---------- 固定選択肢（正・誤・誤・誤） ----------
+  // キー: "親or子-ツモorロン-符-翻" / 値: [正, 誤, 誤, 誤]
+  const fixedChoices = {
+    // 子 ツモ 20
+    "子-ツモ-20-2": ["400/700","700/1300","300/500","500/1000"],
+    "子-ツモ-20-3": ["700/1300","400/700","1300/2600","300/500"],
+    "子-ツモ-20-4": ["1300/2600","700/1300","800/1600","1000/2000"],
+    "子-ツモ-20-5": ["2000/4000","3000/6000","1300/2600","1000/2000"],
+    "子-ツモ-20-6": ["3000/6000","1000/2000","1300/2600","2000/4000"],
+    // 子 ツモ 25
+    "子-ツモ-25-3": ["800/1600","500/1000","700/1300","1000/2000"],
+    "子-ツモ-25-4": ["1600/3200","1000/2000","1300/2600","800/1600"],
+    "子-ツモ-25-5": ["2000/4000","1000/2000","1300/2600","1600/3200"],
+    "子-ツモ-25-6": ["3000/6000","2000/4000","1000/2000","1600/3200"],
+    // 子 ツモ 30
+    "子-ツモ-30-1": ["300/500","400/700","700/1300","400/800"],
+    "子-ツモ-30-2": ["500/1000","400/700","300/500","1000/2000"],
+    "子-ツモ-30-3": ["1000/2000","500/1000","700/1300","1300/2600"],
+    "子-ツモ-30-4": ["2000/4000","3000/6000","1300/2600","1000/2000"],
+    "子-ツモ-30-5": ["2000/4000","3000/6000","1300/2600","1000/2000"],
+    "子-ツモ-30-6": ["3000/6000","1000/2000","1300/2600","2000/4000"],
+    // 子 ツモ 40
+    "子-ツモ-40-1": ["400/700","500/1000","700/1300","400/800"],
+    "子-ツモ-40-2": ["700/1300","400/700","300/500","1000/2000"],
+    "子-ツモ-40-3": ["1300/2600","500/1000","700/1300","1000/2000"],
+    "子-ツモ-40-4": ["2000/4000","3000/6000","1300/2600","1000/2000"],
+    "子-ツモ-40-5": ["2000/4000","3000/6000","1300/2600","1000/2000"],
+    "子-ツモ-40-6": ["3000/6000","1000/2000","1300/2600","2000/4000"],
+    // 子 ツモ 50
+    "子-ツモ-50-1": ["400/800","500/1000","700/1300","300/500"],
+    "子-ツモ-50-2": ["800/1600","400/700","300/500","1000/2000"],
+    "子-ツモ-50-3": ["1600/3200","500/1000","700/1300","1000/2000"],
+    "子-ツモ-50-4": ["2000/4000","3000/6000","1300/2600","1000/2000"],
+    "子-ツモ-50-5": ["2000/4000","3000/6000","1300/2600","1000/2000"],
+    "子-ツモ-50-6": ["3000/6000","1000/2000","1300/2600","2000/4000"],
+    // 子 ツモ 60
+    "子-ツモ-60-1": ["500/1000","400/700","700/1300","400/800"],
+    "子-ツモ-60-2": ["1000/2000","400/700","300/500","1300/2600"],
+    "子-ツモ-60-3": ["2000/4000","1000/2000","700/1300","1300/2600"],
+    "子-ツモ-60-4": ["2000/4000","3000/6000","1300/2600","1000/2000"],
+    "子-ツモ-60-5": ["2000/4000","3000/6000","1300/2600","1000/2000"],
+    "子-ツモ-60-6": ["3000/6000","1000/2000","1300/2600","2000/4000"],
+    // 子 ツモ 70
+    "子-ツモ-70-1": ["600/1200","500/1000","400/800","1000/2000"],
+    "子-ツモ-70-2": ["1200/2300","1000/2000","800/1600","2000/4000"],
+    "子-ツモ-70-3": ["2000/4000","1600/3200","1600/3200","1000/2000"],
+    "子-ツモ-70-4": ["2000/4000","1000/2000","1300/2600","1600/3200"],
+    "子-ツモ-70-5": ["2000/4000","1300/2600","1600/3200","3000/6000"],
+    "子-ツモ-70-6": ["3000/6000","2000/4000","1600/3200","600/1200"],
+
+    // 親 ツモ
+    "親-ツモ-20-2": ["700オール","1300オール","500オール","800オール"],
+    "親-ツモ-20-3": ["1300オール","2600オール","1000オール","1600オール"],
+    "親-ツモ-20-4": ["2600オール","4000オール","2000オール","3200オール"],
+    "親-ツモ-20-5": ["4000オール","6000オール","2600オール","2000オール"],
+    "親-ツモ-20-6": ["6000オール","1600オール","4000オール","4000オール"],
+    "親-ツモ-25-3": ["1600オール","1000オール","2000オール","1300オール"],
+    "親-ツモ-25-4": ["3200オール","2000オール","4000オール","2600オール"],
+    "親-ツモ-25-5": ["4000オール","6000オール","3200オール","2600オール"],
+    "親-ツモ-25-6": ["6000オール","4000オール","3200オール","2600オール"],
+    "親-ツモ-30-1": ["500オール","700オール","800オール","1000オール"],
+    "親-ツモ-30-2": ["1000オール","1300オール","1600オール","2000オール"],
+    "親-ツモ-30-3": ["2000オール","2600オール","3200オール","4000オール"],
+    "親-ツモ-30-4": ["4000オール","2000オール","3200オール","2600オール"],
+    "親-ツモ-30-5": ["4000オール","2000オール","6000オール","3200オール"],
+    "親-ツモ-30-6": ["6000オール","2000オール","4000オール","3200オール"],
+    "親-ツモ-40-1": ["700オール","500オール","800オール","1000オール"],
+    "親-ツモ-40-2": ["1300オール","1000オール","1600オール","2000オール"],
+    "親-ツモ-40-3": ["2600オール","2300オール","2000オール","3200オール"],
+    "親-ツモ-40-4": ["4000オール","3200オール","6000オール","3200オール"],
+    "親-ツモ-40-5": ["4000オール","2600オール","6000オール","3200オール"],
+    "親-ツモ-40-6": ["6000オール","2600オール","4000オール","4000オール"],
+    "親-ツモ-50-1": ["800オール","1200オール","1000オール","1300オール"],
+    "親-ツモ-50-2": ["1600オール","1300オール","2000オール","1000オール"],
+    "親-ツモ-50-3": ["3200オール","4000オール","2600オール","2300オール"],
+    "親-ツモ-50-4": ["4000オール","3200オール","6000オール","3200オール"],
+    "親-ツモ-50-5": ["4000オール","2600オール","6000オール","3200オール"],
+    "親-ツモ-50-6": ["6000オール","2600オール","4000オール","4000オール"],
+    "親-ツモ-60-1": ["1000オール","800オール","1200オール","1300オール"],
+    "親-ツモ-60-2": ["2000オール","2300オール","1600オール","2300オール"],
+    "親-ツモ-60-3": ["4000オール","3200オール","6000オール","3200オール"],
+    "親-ツモ-60-4": ["4000オール","3200オール","6000オール","3200オール"],
+    "親-ツモ-60-5": ["4000オール","2600オール","6000オール","3200オール"],
+    "親-ツモ-60-6": ["6000オール","2600オール","4000オール","4000オール"],
+    "親-ツモ-70-1": ["1200オール","1000オール","1300オール","1600オール"],
+    "親-ツモ-70-2": ["2300オール","2000オール","1600オール","2600オール"],
+    "親-ツモ-70-3": ["4000オール","3200オール","6000オール","3200オール"],
+    "親-ツモ-70-4": ["4000オール","3200オール","6000オール","3200オール"],
+    "親-ツモ-70-5": ["4000オール","2600オール","6000オール","3200オール"],
+    "親-ツモ-70-6": ["6000オール","2600オール","4000オール","4000オール"],
+
+    // 子 ロン
+    "子-ロン-25-2": ["1600","1500","1300","1000"],
+    "子-ロン-25-3": ["3200","2900","2600","2400"],
+    "子-ロン-25-4": ["6400","6000","5800","5200"],
+    "子-ロン-25-5": ["4000","3900","3400","3200"],
+    "子-ロン-25-6": ["6000","5800","5200","4800"],
+    "子-ロン-30-1": ["1000","1300","1600","1500"],
+    "子-ロン-30-2": ["2000","1600","1500","1300"],
+    "子-ロン-30-3": ["3900","3400","3200","2900"],
+    "子-ロン-30-4": ["8000","7700","6800","6400"],
+    "子-ロン-30-5": ["8000","7700","6800","6400"],
+    "子-ロン-30-6": ["12000","9600","8000","7700"],
+    "子-ロン-40-1": ["1300","1000","1600","1600"],
+    "子-ロン-40-2": ["2600","2400","2300","2000"],
+    "子-ロン-40-3": ["5200","4800","4500","4000"],
+    "子-ロン-40-4": ["8000","7700","6800","6400"],
+    "子-ロン-40-5": ["8000","7700","6800","6400"],
+    "子-ロン-40-6": ["12000","9600","8000","7700"],
+    "子-ロン-50-1": ["1600","1500","1300","1000"],
+    "子-ロン-50-2": ["3200","2900","2600","2400"],
+    "子-ロン-50-3": ["6400","6000","5800","5200"],
+    "子-ロン-50-4": ["8000","7700","6800","6400"],
+    "子-ロン-50-5": ["8000","7700","6800","6400"],
+    "子-ロン-50-6": ["12000","9600","8000","7700"],
+    "子-ロン-60-1": ["2000","1600","1500","1300"],
+    "子-ロン-60-2": ["3900","3400","3200","2900"],
+    "子-ロン-60-3": ["8000","7700","6800","6400"],
+    "子-ロン-60-4": ["8000","7700","6800","6400"],
+    "子-ロン-60-5": ["8000","7700","6800","6400"],
+    "子-ロン-60-6": ["12000","9600","8000","7700"],
+    "子-ロン-70-1": ["2300","2000","1600","1500"],
+    "子-ロン-70-2": ["4500","4000","3900","3400"],
+    "子-ロン-70-3": ["8000","7700","6800","6400"],
+    "子-ロン-70-4": ["8000","7700","6800","6400"],
+    "子-ロン-70-5": ["8000","7700","6800","6400"],
+    "子-ロン-70-6": ["12000","9600","8000","7700"],
+
+    // 親 ロン
+    "親-ロン-25-2": ["2400","2000","1500","2900"],
+    "親-ロン-25-3": ["4800","3900","3400","2900"],
+    "親-ロン-25-4": ["9600","7700","6800","5800"],
+    "親-ロン-25-5": ["12000","9600","7700","6800"],
+    "親-ロン-25-6": ["18000","12000","9600","7700"],
+    "親-ロン-30-1": ["1500","2000","2400","2900"],
+    "親-ロン-30-2": ["2900","2400","2000","1500"],
+    "親-ロン-30-3": ["5800","4800","3900","3400"],
+    "親-ロン-30-4": ["12000","9600","7700","6800"],
+    "親-ロン-30-5": ["12000","9600","7700","6800"],
+    "親-ロン-30-6": ["18000","12000","9600","7700"],
+    "親-ロン-40-1": ["2000","1500","2400","2900"],
+    "親-ロン-40-2": ["3900","3400","2900","2400"],
+    "親-ロン-40-3": ["7700","6800","5800","4800"],
+    "親-ロン-40-4": ["12000","9600","7700","6800"],
+    "親-ロン-40-5": ["12000","9600","7700","6800"],
+    "親-ロン-40-6": ["18000","12000","9600","7700"],
+    "親-ロン-50-1": ["2400","2000","1500","2900"],
+    "親-ロン-50-2": ["4800","3900","3400","2900"],
+    "親-ロン-50-3": ["9600","7700","6800","5800"],
+    "親-ロン-50-4": ["12000","9600","7700","6800"],
+    "親-ロン-50-5": ["12000","9600","7700","6800"],
+    "親-ロン-50-6": ["18000","12000","9600","7700"],
+    "親-ロン-60-1": ["2900","2400","2000","1500"],
+    "親-ロン-60-2": ["5800","4800","3900","3400"],
+    "親-ロン-60-3": ["12000","9600","7700","6800"],
+    "親-ロン-60-4": ["12000","9600","7700","6800"],
+    "親-ロン-60-5": ["12000","9600","7700","6800"],
+    "親-ロン-60-6": ["18000","12000","9600","7700"],
+    "親-ロン-70-1": ["3400","2900","2400","2000"],
+    "親-ロン-70-2": ["6800","5800","4800","3900"],
+    "親-ロン-70-3": ["12000","9600","7700","6800"],
+    "親-ロン-70-4": ["12000","9600","7700","6800"],
+    "親-ロン-70-5": ["12000","9600","7700","6800"],
+    "親-ロン-70-6": ["18000","12000","9600","7700"]
+  };
+
+const qNoEl = document.getElementById('qNo');
+
+  // ---------- 計算（正解表示用） ----------
   function calcPoint({isParent, isTsumo, fu, han}){
-    // base point
-    // limit check
-    let limit = null; // '満貫' etc
+    let limit = null;
     let base = fu * Math.pow(2, han + 2); // 基本点
     if (han >= 13)       { limit='役満';  }
     else if (han >= 11)  { limit='三倍満';}
@@ -181,7 +327,6 @@
     else if (han >= 5)   { limit='満貫';  }
     else if (base >= 2000){ limit='満貫'; }
 
-    // limit payments table
     const limRon   = isParent?  {満貫:12000, 跳満:18000, 倍満:24000, 三倍満:36000, 役満:48000}
                               : {満貫: 8000, 跳満:12000, 倍満:16000, 三倍満:24000, 役満:32000};
     const limTAll  =           {満貫: 4000, 跳満: 6000, 倍満: 8000, 三倍満:12000, 役満:16000}; // 親ツモ オール
@@ -199,7 +344,6 @@
           disp = `${pay}オール`; norm = disp;
         }else{
           const [c,p] = limChild[limit];
-          disp = `${c*1000/1000}/${p*1000/1000}`; // 2000/4000 など
           disp = `${c}/${p}`; norm = disp;
         }
       }
@@ -223,63 +367,10 @@
     return {disp, norm, suffix, limit:null};
   }
 
-  // distractors generator
-  function genDistractors(ans, meta){
-    const set = new Set([ans.norm]);
-    const list = [];
-    const push = (s)=>{ if(!set.has(s)){ set.add(s); list.push(s);} };
-
-    // 近傍の誤答を作る
-    const vary = ()=>{
-      const {isParent,isTsumo} = meta;
-      if (!isTsumo){
-        // ron single number
-        let v = parseInt(ans.norm,10);
-        const delta = [100,200,300,400,500][rand(5)];
-        const s1 = String(v + delta);
-        const s2 = String(Math.max(1000, v - delta));
-        push(s1); push(s2);
-      }else if(isParent){
-        // parent tsumo Xオール
-        const m = ans.norm.match(/^(\d+)オール$/);
-        if (m){
-          const x = parseInt(m[1],10);
-          push(`${x+200}オール`);
-          push(`${Math.max(200,x-200)}オール`);
-        }
-      }else{
-        // child tsumo a/b
-        const m = ans.norm.match(/^(\d+)\/(\d+)$/);
-        if (m){
-          let a = parseInt(m[1],10), b = parseInt(m[2],10);
-          push(`${a+100}/${b+200}`);
-          push(`${Math.max(100,a-100)}/${Math.max(200,b-200)}`);
-        }
-      }
-    };
-    vary();
-
-    // 型違いのひっかけ
-    if (meta.isTsumo && !meta.isParent){
-      push(ans.norm.replace('/','／'));
-      push(`${ans.norm.split('/')[1]}オール`);
-    }else if(meta.isTsumo && meta.isParent){
-      push(ans.norm.replace('オール',' オール'));
-      push(ans.norm.replace('オール',''));
-    }else{
-      push(String(parseInt(ans.norm,10)+700));
-      push(`${ans.norm}点`);
-    }
-
-    // 3つに制限
-    while(list.length>3) list.splice(rand(list.length),1);
-    return list.slice(0,3);
-  }
-
-  // ---------- game state ----------
+  // ---------- state ----------
   const MAXQ = 10;
   let qIndex = 0;
-  const history = []; // {meta, disp, ans, ok}
+  const history = []; // {meta, sel, ans, ok}
 
   const $ = (sel)=> document.querySelector(sel);
 
@@ -292,24 +383,27 @@
   const qaArea   = $('#qaArea');
   const answers  = $('#answers');
   const resultWrap = $('#resultWrap');
-  const qaTbody  = $('#qaTbody');
-  const jgTbody  = $('#jgTbody');
+  const oneTbody  = $('#oneTbody');
 
-  // ---------- question generation ----------
+  const keyFor = (m)=> `${m.isParent?'親':'子'}-${m.isTsumo?'ツモ':'ロン'}-${m.fu}-${m.han}`;
+
+  // fixedChoices に存在する組み合わせだけ出題
   function nextMeta(){
-    const isParent = !!rand(2);          // 親:1 子:0
-    const isTsumo  = !!rand(2);          // ツモ:1 ロン:0
-    let fuCand = [20,25,30,40,50,60,70,80,90,110];
-    // ロンで20符は不可
-    let fu = choice(fuCand);
-    if (!isTsumo && fu===20) fu = 30;
-
-    // たまに大きめ符
-    if (rand(12)===0) fu = choice([90,110]);
-
-    const han = choice([1,2,3,4,5,6,7,8,9,10,11,12,13]);
-
-    return {isParent,isTsumo,fu,han};
+    const fus = [20,25,30,40,50,60,70];
+    const hans = [1,2,3,4,5,6];
+    for(;;){
+      const isParent = !!rand(2);
+      const isTsumo  = !!rand(2);
+      let fu = choice(fus);
+      if (!isTsumo && fu===20) fu = choice([25,30,40,50,60,70]);
+      let han;
+      if (isTsumo && fu===20) han = choice([2,3,4,5,6]);
+      else if (isTsumo && fu===25) han = choice([3,4,5,6]);
+      else if (!isTsumo && fu===25) han = choice([2,3,4,5,6]);
+      else han = choice(hans);
+      const meta = {isParent,isTsumo,fu,han};
+      if (fixedChoices[keyFor(meta)]) return meta;
+    }
   }
 
   function metaLabel(m){
@@ -321,18 +415,6 @@
     };
   }
 
-  function buildChoices(meta){
-    const ans  = calcPoint(meta);
-    const dums = genDistractors(ans, meta);
-    const all  = [ans.norm, ...dums];
-    // shuffle
-    for(let i=all.length-1;i>0;i--){
-      const j = rand(i+1); const t=all[i]; all[i]=all[j]; all[j]=t;
-    }
-    // 表示文字列は ans.norm と同じフォーマット
-    return {correct: ans, options: all};
-  }
-
   function setChips(meta){
     const lab = metaLabel(meta);
     chips.parent.textContent = lab.parent;
@@ -341,16 +423,36 @@
     chips.han.textContent    = lab.han;
   }
 
+  function buildChoices(meta){
+    const key = keyFor(meta);
+    const list = fixedChoices[key];
+    const correct = calcPoint(meta);
+    const options = list.slice(); // 正・誤・誤・誤
+    // シャッフル
+    for(let i=options.length-1;i>0;i--){
+      const j = rand(i+1); [options[i], options[j]] = [options[j], options[i]];
+    }
+    return {correct, options};
+  }
+
   function drawQuestion(){
     if (qIndex>=MAXQ){ showResult(); return; }
 
     qaArea.hidden = false;
     resultWrap.hidden = true;
 
-    const meta = nextMeta();
-    setChips(meta);
+  if (qNoEl) qNoEl.textContent = String(qIndex + 1).padStart(2,'0');
 
-    const {correct, options} = buildChoices(meta);
+    let meta, pack;
+    for(;;){
+      meta = nextMeta();
+      pack = buildChoices(meta);
+      if (pack.options.length === 4) break;
+    }
+
+    setChips(meta);
+    const {correct, options} = pack;
+
     answers.innerHTML = '';
     options.forEach(txt=>{
       const b = document.createElement('button');
@@ -359,7 +461,6 @@
       b.addEventListener('click', ()=>{
         const ok = (txt===correct.norm);
         history.push({meta, sel:txt, ans:correct.disp+(correct.suffix||''), ok});
-        // 軽いフェードで次へ
         answers.style.opacity='0';
         setTimeout(()=>{
           answers.style.opacity='1';
@@ -371,30 +472,26 @@
     });
   }
 
-  // ---------- result ----------
   function showResult(){
     qaArea.hidden = true;
     resultWrap.hidden = false;
 
-    // 表クリア
-    qaTbody.innerHTML=''; jgTbody.innerHTML='';
-
+    oneTbody.innerHTML='';
     history.forEach((h,i)=>{
       const lab = metaLabel(h.meta);
-      const tr1 = document.createElement('tr');
-      tr1.innerHTML = `<td>${String(i+1).padStart(2,'0')}</td><td>${lab.parent}</td><td>${lab.tr}</td><td>${lab.fu}</td><td>${lab.han}</td>`;
-      qaTbody.appendChild(tr1);
-
-      const tr2 = document.createElement('tr');
+      const tr = document.createElement('tr');
       const mark = `<span class="mark ${h.ok?'ok':'ng'}"></span>`;
-      tr2.innerHTML = `<td>${mark}</td><td class="sel">${h.sel}</td><td class="ans">${h.ans}</td>`;
-      jgTbody.appendChild(tr2);
+      tr.innerHTML =
+        `<td class="col-no">${String(i+1).padStart(2,'0')}</td>` +
+        `<td>${lab.parent}</td><td>${lab.tr}</td><td>${lab.fu}</td><td>${lab.han}</td>` +
+        `<td class="col-mark">${mark}</td>` +
+        `<td class="sel">${h.sel}</td>` +
+        `<td class="ans">${h.ans}</td>`;
+      oneTbody.appendChild(tr);
     });
   }
 
-  // ---------- controls ----------
   function renderInitView(){
-    // 初期ラベル
     chips.parent.textContent='親／子';
     chips.tr.textContent='ツモ／ロン';
     chips.fu.textContent='符';
@@ -404,6 +501,8 @@
     answers.innerHTML='';
     qaArea.hidden = true;
     resultWrap.hidden = true;
+    oneTbody.innerHTML='';
+if (qNoEl) qNoEl.textContent = '01';
   }
 
   document.getElementById('btnStart').addEventListener('click', ()=>{
