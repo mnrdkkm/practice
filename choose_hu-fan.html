@@ -373,38 +373,38 @@ window.addEventListener('error', function (e) {
 
   function sumArr(a){ return a.reduce((x,y)=>x+y,0); }
 
-// --- 混全帯么九／純全帯么九の判定ヘルパー -------------------
-const isHonor   = t => t.suit === 'z';
-const isTerm    = t => !isHonor(t) && (t.num === 1 || t.num === 9);
+// --- 混全帯么九／純全帯么九 判定ヘルパー（安全のため接頭辞 ch_） ---
+const ch_isHonor = t => t.suit === 'z';
+const ch_isTerm  = t => !ch_isHonor(t) && (t.num === 1 || t.num === 9);
 
-// 面子が順子123 または 789 か
-function isChow123or789(m){
+// 順子が 123 または 789 か
+function ch_isChow123or789(m){
   return m.type === 'shuntsu' && (m.low === 1 || m.low === 7);
 }
 
-// d: 分解 { groups:[{type:'shuntsu'|'koutsu'|'kantsu'|'pair', suit, low, tile/eyes }], menzen:boolean }
-function judgeChanta(d){
+// d: { groups:[{type:'shuntsu'|'koutsu'|'kantsu'|'pair', suit, low, tile/eyes}], menzen:boolean }
+function ch_judgeChanta(d){
   const gs = d.groups;
 
-  // 順子が1つも無ければチャンタ系は不可（ホン老頭の可能性）
+  // 順子が1つも無ければチャンタ系は不可
   if (!gs.some(g => g.type === 'shuntsu')) return { chanta:false, junchan:false };
 
-  // すべてのブロックが「端(1/9)か字牌」を含んでいるか
+  // すべてが 端牌(1/9) or 字牌 を含むか
   const everyOK = gs.every(g => {
-    if (g.type === 'shuntsu') return isChow123or789(g);   // 123 or 789 の順子のみOK
-    const t = g.tile || g.eyes;                            // 刻子/槓子/雀頭の代表牌
-    return isHonor(t) || isTerm(t);
+    if (g.type === 'shuntsu') return ch_isChow123or789(g);
+    const t = g.tile || g.eyes;
+    return ch_isHonor(t) || ch_isTerm(t);
   });
   if (!everyOK) return { chanta:false, junchan:false };
 
-  // 字牌の有無で純チャン/チャンタを分岐
-  const hasHonorTile = gs.some(g => {
+  // 字牌の有無で純チャン/チャンタを分ける
+  const hasHonor = gs.some(g => {
     if (g.type === 'shuntsu') return false;
     const t = g.tile || g.eyes;
-    return isHonor(t);
+    return ch_isHonor(t);
   });
 
-  return { chanta:true, junchan:!hasHonorTile };
+  return { chanta:true, junchan:!hasHonor };
 }
 
 
@@ -441,15 +441,6 @@ function judgeChanta(d){
 
     if(isMenzen){ const pairs=countPeikouPairsFromMelds(d.melds); if(pairs>=2){ hanYaku+=3; yaku.push('二盃口'); } else if(pairs===1){ hanYaku+=1; yaku.push('一盃口'); } }
 
-// --- 混全帯么九／純全帯么九 ---
-{
-  const { chanta, junchan } = judgeChanta(decomp);
-  if (junchan) {
-    addYaku('純全帯么九', decomp.menzen ? 3 : 2);
-  } else if (chanta) {
-    addYaku('混全帯么九', decomp.menzen ? 2 : 1);
-  }
-}
 
     // 三色同順（厳密）
     {
@@ -753,6 +744,23 @@ function judgeChanta(d){
 
   tabMemo.addEventListener('click', () => { tabMemo.classList.add('active'); tabScore.classList.remove('active'); panelMemo.hidden = false; panelScore.hidden = true; });
   tabScore.addEventListener('click', () => { tabScore.classList.add('active'); tabMemo.classList.remove('active'); panelMemo.hidden = true; panelScore.hidden = false; });
+
+// ---- 初期表示は「点数表」に強制 ----
+requestAnimationFrame(() => {
+  // 既存ハンドラを使って安全に切替
+  document.getElementById('tabScore')?.click();
+
+  // 念のため直接も反映（クリックできない状況でも確実に切替）
+  const tabMemo    = document.getElementById('tabMemo');
+  const tabScore   = document.getElementById('tabScore');
+  const panelMemo  = document.getElementById('panelMemo');
+  const panelScore = document.getElementById('panelScore');
+
+  if (panelMemo)  panelMemo.hidden  = true;
+  if (panelScore) panelScore.hidden = false;
+  if (tabMemo)  tabMemo.classList.remove('active');
+  if (tabScore) tabScore.classList.add('active');
+});
 
   const FU_ROWS = ['20符','25符','30符','40符','50符','60符'];
   const HAN_HEAD = ['1飜','2飜','3飜','4飜','5飜'];
