@@ -277,6 +277,40 @@
     font-weight: 800; 
   }
 
+  /* 小さなテンキー入力エリア */
+  .tenkeyInput{
+    margin: 0.5em auto 0;
+    max-width: 300px;
+    display: none;
+  }
+  .tenkeyInput.active{
+    display: block;
+  }
+  .tenkeyInput input{
+    width: 100%;
+    padding: 8px;
+    font-size: clamp(14px, 4vw, 16px);
+    font-weight: 600;
+    text-align: center;
+    border: 1px solid #bbb;
+    border-radius: 6px;
+    letter-spacing: 0.2em;
+    font-family: ui-monospace, monospace;
+    background: #f9f9f9;
+  }
+  .tenkeyInput input:focus{
+    outline: none;
+    border-color: #1976d2;
+    background: #fff;
+    box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.1);
+  }
+  .tenkeyHelp{
+    font-size: clamp(10px, 2.6vw, 12px);
+    color: #666;
+    margin-top: 0.2em;
+    text-align: center;
+  }
+
   /* モバイル最適化 */
   @media (max-width: 480px) {
     body{ padding: 8px; }
@@ -336,6 +370,12 @@
     <span id="timer" class="timer" aria-live="polite"></span>
   </div>
 
+  <!-- 小さなテンキー入力エリア -->
+  <div id="tenkeyInput" class="tenkeyInput">
+    <input type="tel" id="tenkeyField" inputmode="numeric" pattern="[0-9*#]*" autocomplete="off" placeholder="1〜9を入力">
+    <div class="tenkeyHelp">選択した数字: <span id="selectedNums"></span></div>
+  </div>
+
   <!-- 残り時間メーター -->
   <div id="timeMeter" class="timeMeter" aria-live="polite" aria-label="残り時間"></div>
 
@@ -385,6 +425,9 @@
   const udToggle  = document.getElementById('udToggle');
   const speedToggle = document.getElementById('speedToggle');
   const tenkeyToggle = document.getElementById('tenkeyToggle');
+  const tenkeyInputDiv = document.getElementById('tenkeyInput');
+  const tenkeyField = document.getElementById('tenkeyField');
+  const selectedNumsSpan = document.getElementById('selectedNums');
   const timerEl   = document.getElementById('timer');
   const timeMeterEl = document.getElementById('timeMeter');
 
@@ -450,6 +493,14 @@
     return d;
   }
 
+  // ===== 選択表示更新 =====
+  function updateSelectedDisplay(){
+    if(selectedNumsSpan){
+      const nums = [...selected].sort((a,b)=>a-b);
+      selectedNumsSpan.textContent = nums.length > 0 ? nums.join(', ') : 'なし';
+    }
+  }
+
   // ===== レンダリング =====
   function renderHand(){
     problemEl.innerHTML='';
@@ -463,6 +514,7 @@
       btn.addEventListener('click', ()=>{
         if(selected.has(i)){ selected.delete(i); btn.classList.remove('selected'); }
         else{ selected.add(i); btn.classList.add('selected'); }
+        updateSelectedDisplay();
       });
       choicesEl.appendChild(btn);
     }
@@ -636,6 +688,8 @@
   // ===== 次の問題 =====
   function next(){
     selected.clear(); resultEl.className=''; resultEl.textContent=''; errEl.textContent='';
+    if(tenkeyField) tenkeyField.value = '';
+    updateSelectedDisplay();
     stopTimer();
     makeProblem(); renderHand(); renderChoices();
     if(speedMode){ btnReveal.disabled = true; startTimer(); }
@@ -662,7 +716,56 @@
   });
   btnNext.addEventListener('click', next);
   
+  // テンキーフィールドの入力処理
+  if(tenkeyField){
+    tenkeyField.addEventListener('input', (e)=>{
+      // 1-9以外の文字を除去
+      const cleaned = e.target.value.replace(/[^1-9]/g, '');
+      e.target.value = cleaned;
+      
+      // 入力に応じて牌を選択
+      selected.clear();
+      for(let char of cleaned){
+        const num = parseInt(char, 10);
+        if(num >= 1 && num <= 9){
+          selected.add(num);
+        }
+      }
+      
+      // 牌の見た目を更新
+      [...choicesEl.children].forEach(el=>{
+        const n = +el.dataset.num;
+        if(selected.has(n)){
+          el.classList.add('selected');
+        } else {
+          el.classList.remove('selected');
+        }
+      });
+      
+      updateSelectedDisplay();
+    });
+    
+    tenkeyField.addEventListener('keydown', (e)=>{
+      if(e.key === '0' || e.key === 'Enter'){
+        judge();
+        e.preventDefault();
+      } else if(e.key === '*'){
+        if(!btnReveal.disabled){
+          resultEl.className='';
+          resultEl.textContent = '正解: ' + [...waits].sort((a,b)=>a-b).map(n=>NUMS[n-1]+'萬').join(' ');
+        }
+        e.preventDefault();
+      } else if(e.key === '#'){
+        next();
+        e.preventDefault();
+      }
+    });
+  }
+  
   window.addEventListener('keydown', (e)=>{ 
+    // テンキーフィールドにフォーカスがある場合はそちらで処理
+    if(tenkeyMode && document.activeElement === tenkeyField) return;
+    
     // 通常モードのキー
     if(e.key==='Enter') judge(); 
     if(e.key.toLowerCase()==='n') next();
@@ -681,6 +784,7 @@
             selected.add(num); 
             btn.classList.add('selected'); 
           }
+          updateSelectedDisplay();
         }
         e.preventDefault();
       }
@@ -727,9 +831,13 @@
     try{ localStorage.setItem(LS_TENKEY, tenkeyMode ? '1' : '0'); }catch(_){}
     
     if(tenkeyMode){
+      tenkeyInputDiv.classList.add('active');
+      if(tenkeyField) tenkeyField.focus();
       resultEl.className=''; 
       resultEl.textContent = 'テンキーモード: 1-9で牌選択、0で回答、*で答え表示、#で次の問題';
       setTimeout(() => { if(resultEl.textContent.includes('テンキーモード')) resultEl.textContent = ''; }, 3000);
+    } else {
+      tenkeyInputDiv.classList.remove('active');
     }
   });
 
@@ -739,6 +847,12 @@
     document.body.classList.toggle('ud', udToggle.checked);
     speedToggle.checked = speedMode;
     tenkeyToggle.checked = tenkeyMode;
+    
+    // テンキーモードの初期状態を反映
+    if(tenkeyMode){
+      tenkeyInputDiv.classList.add('active');
+    }
+    
     applySize(sizePx);
     next();
   }
