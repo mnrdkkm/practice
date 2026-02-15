@@ -353,7 +353,7 @@
       <input type="checkbox" id="speedToggle">
       <span class="slider" aria-hidden="true"></span>
       <span class="label">スピード</span>
-      <span class="sub">(10秒)</span>
+      <span class="sub">(AUTO10秒)</span>
     </label>
     <label class="tenkeySwitch" title="テンキーで操作 (1-9選択, Enter回答, Space答え, 0次)">
       <input type="checkbox" id="tenkeyToggle">
@@ -554,32 +554,48 @@
     if(sum(c8)!==8) return false;
     if(!isAgari8Std(c8.slice())) return false;
 
-    function dfs(cnt){
-      let i=1; while(i<=9 && cnt[i]===0) i++; if(i>9) return true;
+    function dfs(cnt, depth = 0){
+      const indent = '  '.repeat(depth);
+      let i=1; while(i<=9 && cnt[i]===0) i++; 
+      if(i>9) {
+        console.log(indent + '✓ 全て使い切った');
+        return true;
+      }
+      console.log(indent + `牌状態: [${cnt.slice(1).join(',')}], i=${i}, 待ち牌t=${t}`);
+      
       if(cnt[i]>=3){
-        cnt[i]-=3; if(dfs(cnt)){ cnt[i]+=3; return true; } cnt[i]+=3;
+        console.log(indent + `刻子${i}${i}${i}を試す`);
+        cnt[i]-=3; 
+        if(dfs(cnt, depth+1)){ cnt[i]+=3; return true; } 
+        cnt[i]+=3;
       }
       if(i<=7 && cnt[i+1]>0 && cnt[i+2]>0){
-        const useT = (i===t-1 || i+1===t || i+2===t);
-        const banned = (i+1===t) || (t===3 && i===1) || (t===7 && i===7);
-        if(!(useT && banned)){
-          cnt[i]--; cnt[i+1]--; cnt[i+2]--;
-          const ok = dfs(cnt);
-          cnt[i]++; cnt[i+1]++; cnt[i+2]++;
-          if(ok) return true;
-        }
+        console.log(indent + `順子${i}${i+1}${i+2}を試す`);
+        cnt[i]--; cnt[i+1]--; cnt[i+2]--;
+        const ok = dfs(cnt, depth+1);
+        cnt[i]++; cnt[i+1]++; cnt[i+2]++;
+        if(ok) return true;
       }
       return false;
     }
 
+    console.log(`\n=== 待ち牌 ${t} の判定開始 ===`);
+    console.log(`7枚: [${c7.slice(1).join(',')}]`);
+    console.log(`8枚: [${c8.slice(1).join(',')}]`);
+    
     for(let j=1;j<=9;j++){
       if(c8[j]>=2){
+        console.log(`\n雀頭候補: ${j}${j}`);
         c8[j]-=2;
-        const ok = dfs(c8);
+        const ok = dfs(c8.slice(), 1);
         c8[j]+=2;
-        if(ok) return true;
+        if(ok) {
+          console.log(`✓ 待ち牌 ${t} は成立\n`);
+          return true;
+        }
       }
     }
+    console.log(`✗ 待ち牌 ${t} は不成立\n`);
     return false;
   }
   function waitsFor7(c7){
@@ -668,6 +684,13 @@
     
     const pick=[...selected].sort((a,b)=>a-b).join(',');
     const ans=[...waits].sort((a,b)=>a-b).join(',');
+    
+    // デバッグログ
+    console.log('判定開始:');
+    console.log('  selected:', [...selected], '→ sorted:', pick);
+    console.log('  waits:', [...waits], '→ sorted:', ans);
+    console.log('  一致:', pick === ans);
+    
     if(pick===ans){
       resultEl.className='ok';
       resultEl.textContent='🟢 完全正解！';
@@ -736,6 +759,9 @@
         }
       }
       
+      // デバッグ: selectedの中身を確認
+      console.log('入力:', cleaned, '→ selected:', [...selected].sort((a,b)=>a-b));
+      
       // 牌の見た目を更新
       [...choicesEl.children].forEach(el=>{
         const n = +el.dataset.num;
@@ -751,6 +777,7 @@
     
     tenkeyField.addEventListener('keydown', (e)=>{
       if(e.key === 'Enter'){
+        console.log('Enterキー押下時 selected:', [...selected].sort((a,b)=>a-b));
         judge();
         e.preventDefault();
       } else if(e.key === ' '){
