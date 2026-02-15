@@ -32,6 +32,21 @@
     margin: 0.2em 0 0.6em;
   }
 
+  /* テンキーモード・スイッチ */
+  .tenkeySwitch{
+    display: inline-flex; 
+    align-items: center; 
+    gap: 8px; 
+    cursor: pointer; 
+    user-select: none;
+    font-weight: 800; 
+    font-size: clamp(12px, 3.2vw, 15px);
+    white-space: nowrap;
+  }
+  .tenkeySwitch input{ display: none; }
+  .tenkeySwitch .label{ font-weight: 900; }
+  .tenkeySwitch .sub{ font-weight: 700; opacity: .7; font-size: .9em; }
+
   /* スピードモード・スイッチ */
   .switch{
     display: inline-flex; 
@@ -88,7 +103,7 @@
     flex-wrap: wrap; 
     gap: 8px; 
     margin: 0.6em auto;
-    max-width: 100%;
+    max-width: calc(var(--w) * 9 + 8px * 8); /* 9枚分の幅 + gap */
   }
 
   /* 牌 */
@@ -278,6 +293,12 @@
       <span class="label">スピード</span>
       <span class="sub">(10秒)</span>
     </label>
+    <label class="tenkeySwitch" title="テンキーで操作 (1-9選択, 0回答, *答え, #次)">
+      <input type="checkbox" id="tenkeyToggle">
+      <span class="slider" aria-hidden="true"></span>
+      <span class="label">テンキー</span>
+      <span class="sub">(1-9,0*#)</span>
+    </label>
   </div>
 
   <div id="problem" class="board" aria-label="問題の手牌（7枚）"></div>
@@ -339,6 +360,7 @@
 
   const udToggle  = document.getElementById('udToggle');
   const speedToggle = document.getElementById('speedToggle');
+  const tenkeyToggle = document.getElementById('tenkeyToggle');
   const timerEl   = document.getElementById('timer');
   const timeMeterEl = document.getElementById('timeMeter');
 
@@ -359,6 +381,10 @@
   const timeLimit = 10;
   let timeLeft = 0;
   let timerId = null;
+
+  // テンキーモード
+  const LS_TENKEY = 'tenkeyMode7';
+  let tenkeyMode = (localStorage.getItem(LS_TENKEY) === '1');
 
   // 連続正解
   let streak = 0;
@@ -609,7 +635,49 @@
     resultEl.textContent = '正解: ' + [...waits].sort((a,b)=>a-b).map(n=>NUMS[n-1]+'萬').join(' ');
   });
   btnNext.addEventListener('click', next);
-  window.addEventListener('keydown', (e)=>{ if(e.key==='Enter') judge(); if(e.key.toLowerCase()==='n') next(); });
+  
+  window.addEventListener('keydown', (e)=>{ 
+    // 通常モードのキー
+    if(e.key==='Enter') judge(); 
+    if(e.key.toLowerCase()==='n') next();
+    
+    // テンキーモード
+    if(tenkeyMode){
+      // 1-9キー（数字キーとテンキーの両方）
+      if(/^[1-9]$/.test(e.key)){
+        const num = parseInt(e.key, 10);
+        const btn = [...choicesEl.children].find(el => +el.dataset.num === num);
+        if(btn && !btn.disabled){
+          if(selected.has(num)){ 
+            selected.delete(num); 
+            btn.classList.remove('selected'); 
+          } else { 
+            selected.add(num); 
+            btn.classList.add('selected'); 
+          }
+        }
+        e.preventDefault();
+      }
+      // 0キー（回答）
+      else if(e.key === '0'){
+        judge();
+        e.preventDefault();
+      }
+      // *キー（答えを表示）
+      else if(e.key === '*'){
+        if(!btnReveal.disabled){
+          resultEl.className='';
+          resultEl.textContent = '正解: ' + [...waits].sort((a,b)=>a-b).map(n=>NUMS[n-1]+'萬').join(' ');
+        }
+        e.preventDefault();
+      }
+      // #キー（次の問題）
+      else if(e.key === '#'){
+        next();
+        e.preventDefault();
+      }
+    }
+  });
 
   sizeDown.addEventListener('click', ()=> applySize(sizePx - SIZE_STEP));
   sizeUp  .addEventListener('click', ()=> applySize(sizePx + SIZE_STEP));
@@ -628,11 +696,22 @@
     }
   });
 
+  tenkeyToggle.addEventListener('change', ()=>{
+    tenkeyMode = tenkeyToggle.checked;
+    try{ localStorage.setItem(LS_TENKEY, tenkeyMode ? '1' : '0'); }catch(_){}
+    if(tenkeyMode){
+      resultEl.className=''; 
+      resultEl.textContent = 'テンキーモード: 1-9で選択、0で回答、*で答え表示、#で次の問題';
+      setTimeout(() => { if(resultEl.textContent.includes('テンキーモード')) resultEl.textContent = ''; }, 3000);
+    }
+  });
+
   // ===== 初期化 =====
   function init(){
     loadStreak(); renderStreak();
     document.body.classList.toggle('ud', udToggle.checked);
     speedToggle.checked = speedMode;
+    tenkeyToggle.checked = tenkeyMode;
     applySize(sizePx);
     next();
   }
