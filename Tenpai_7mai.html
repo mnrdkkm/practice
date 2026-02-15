@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ja">
 <head>
 <meta charset="UTF-8" />
@@ -7,109 +7,264 @@
 <style>
   :root{ --w: clamp(44px, 10vw, 64px); --h: calc(var(--w) * 1.45); }
   *{ box-sizing: border-box; }
-  body{ font-family: system-ui, -apple-system, "Segoe UI", sans-serif; margin:12px; text-align:center; color:#111; }
-  h2{ font-size: clamp(16px, 4.5vw, 22px); margin: 0; }
+  body{ 
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif; 
+    margin: 0;
+    padding: 12px; 
+    text-align: center; 
+    color: #111;
+    max-width: 100vw;
+    overflow-x: hidden;
+  }
+  h2{ 
+    font-size: clamp(16px, 4.5vw, 22px); 
+    margin: 0; 
+    word-break: keep-all;
+  }
 
   /* タイトル＋スイッチ行 */
   .titleRow{
-    display:flex; gap:14px; align-items:center; justify-content:center; flex-wrap:wrap;
-    margin: .2em 0 .6em;
+    display: flex; 
+    gap: 10px; 
+    align-items: center; 
+    justify-content: center; 
+    flex-wrap: wrap;
+    margin: 0.2em 0 0.6em;
   }
 
   /* スピードモード・スイッチ */
   .switch{
-    display:inline-flex; align-items:center; gap:10px; cursor:pointer; user-select:none;
-    font-weight:800; font-size: clamp(13px, 3.6vw, 15px);
+    display: inline-flex; 
+    align-items: center; 
+    gap: 8px; 
+    cursor: pointer; 
+    user-select: none;
+    font-weight: 800; 
+    font-size: clamp(12px, 3.2vw, 15px);
+    white-space: nowrap;
   }
-  .switch input{ display:none; }
+  .switch input{ display: none; }
   .slider{
-    position:relative; width:48px; height:28px; border-radius:999px; background:#d7dbe3; transition:background .18s ease;
+    position: relative; 
+    width: 44px; 
+    height: 24px; 
+    border-radius: 999px; 
+    background: #d7dbe3; 
+    transition: background .18s ease;
     box-shadow: inset 0 1px 2px #0001;
+    flex-shrink: 0;
   }
   .slider::after{
-    content:""; position:absolute; top:3px; left:3px; width:22px; height:22px; border-radius:50%;
-    background:#fff; box-shadow:0 1px 4px #0003; transition:left .18s ease;
+    content: ""; 
+    position: absolute; 
+    top: 2px; 
+    left: 2px; 
+    width: 20px; 
+    height: 20px; 
+    border-radius: 50%;
+    background: #fff; 
+    box-shadow: 0 1px 4px #0003; 
+    transition: left .18s ease;
   }
-  .switch input:checked + .slider{ background:#4dabf7; }
-  .switch input:checked + .slider::after{ left:23px; }
-  .switch .label{ font-weight:900; }
-  .switch .sub{ font-weight:700; opacity:.7; font-size:.92em; }
+  .switch input:checked + .slider{ background: #4dabf7; }
+  .switch input:checked + .slider::after{ left: 22px; }
+  .switch .label{ font-weight: 900; }
+  .switch .sub{ font-weight: 700; opacity: .7; font-size: .9em; }
 
   .board{
-    display:flex; justify-content:center; flex-wrap:wrap; gap:6px; margin: 0.6em;
-    background:#0b6623; /* 緑ラシャ */
-    padding:10px; border-radius:8px;
+    display: flex; 
+    justify-content: center; 
+    flex-wrap: wrap; 
+    gap: 4px; 
+    margin: 0.6em auto;
+    background: #0b6623;
+    padding: 10px; 
+    border-radius: 8px;
+    max-width: 100%;
   }
-  .choices{ display:flex; justify-content:center; flex-wrap:wrap; gap:10px; margin: 0.6em; }
+  .choices{ 
+    display: flex; 
+    justify-content: center; 
+    flex-wrap: wrap; 
+    gap: 8px; 
+    margin: 0.6em auto;
+    max-width: 100%;
+  }
 
   /* 牌 */
   .tile{
-    width: var(--w); height: var(--h);
-    border: 2px solid #8a8a8a; border-radius: 6px; background:#fff;
+    width: var(--w); 
+    height: var(--h);
+    border: 2px solid #8a8a8a; 
+    border-radius: 6px; 
+    background: #fff;
     box-shadow: inset 0 0 0 2px #fff, 0 1px 2px rgba(0,0,0,.06);
-    display:flex; align-items:center; justify-content:center;
-    writing-mode: vertical-rl; text-orientation: upright;
-    font-size: clamp(22px, calc(var(--w) * 0.58), 38px); font-weight: 800; color:#000;
-    line-height: 1; user-select: none;
+    display: flex; 
+    align-items: center; 
+    justify-content: center;
+    writing-mode: vertical-rl; 
+    text-orientation: upright;
+    font-size: clamp(22px, calc(var(--w) * 0.58), 38px); 
+    font-weight: 800; 
+    color: #000;
+    line-height: 1; 
+    user-select: none;
+    flex-shrink: 0;
   }
-  .tile .man{ color:#c62828; font-size:0.95em; }
-  .choices .tile{ cursor:pointer; }
+  .tile .man{ color: #c62828; font-size: 0.95em; }
+  .choices .tile{ cursor: pointer; }
   .choices .selected{ outline: 3px solid #1976d2; outline-offset: 2px; }
 
-  button{ padding:10px 14px; border-radius:12px; border:1px solid #777; background:#f7f7f7; font-weight:800; font-size:clamp(14px,3.4vw,16px); }
-  #streakRow button{ font-size: clamp(14px, 4vw, 18px); padding: 8px 14px; }
+  button{ 
+    padding: 10px 14px; 
+    border-radius: 12px; 
+    border: 1px solid #777; 
+    background: #f7f7f7; 
+    font-weight: 800; 
+    font-size: clamp(13px, 3.4vw, 16px);
+    white-space: nowrap;
+    cursor: pointer;
+  }
+  button:active{ background: #e0e0e0; }
+  #streakRow button{ 
+    font-size: clamp(13px, 3.6vw, 16px); 
+    padding: 8px 12px; 
+  }
 
-  .controls{ display:flex; gap:12px; align-items:center; justify-content:center; flex-wrap:wrap; margin:6px 0 2px; font-size:clamp(12px,3.2vw,14px); }
-  .btnRow{ display:flex; gap:14px; justify-content:center; flex-wrap:wrap; align-items:center; }
-  .timer{ display:none !important; } /* ← 数字のカウントダウンは非表示にする */
-  #err{ color:#d32f2f; font-weight:700; font-size:12px; margin-top:6px; }
-  #streakRow{ font-size: clamp(14px, 4vw, 18px); display:flex; gap:10px; align-items:center; justify-content:center; flex-wrap:wrap; }
+  .controls{ 
+    display: flex; 
+    gap: 12px; 
+    align-items: center; 
+    justify-content: center; 
+    flex-wrap: wrap; 
+    margin: 6px 0 2px; 
+    font-size: clamp(11px, 3vw, 14px);
+  }
+  .btnRow{ 
+    display: flex; 
+    gap: 10px; 
+    justify-content: center; 
+    flex-wrap: wrap; 
+    align-items: center;
+    margin: 0.4em 0;
+  }
+  .timer{ display: none !important; }
+  #err{ 
+    color: #d32f2f; 
+    font-weight: 700; 
+    font-size: 12px; 
+    margin-top: 6px; 
+  }
+  #streakRow{ 
+    font-size: clamp(13px, 3.6vw, 16px); 
+    display: flex; 
+    gap: 10px; 
+    align-items: center; 
+    justify-content: center; 
+    flex-wrap: wrap;
+    margin: 0.6em 0;
+  }
   #streakRow strong{ font-size: 1.1em; }
+  #streakRow > span{
+    display: inline-block;
+    text-align: center;
+  }
 
-  /* 残り時間メーター（大きめ） */
+  /* 残り時間メーター */
   .timeMeter{
     font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
     font-weight: 900;
-    letter-spacing: 2px;
+    letter-spacing: 1px;
     text-align: center;
     margin-top: 8px;
-    min-height: 1.6em;   /* 空でも高さ確保してピコつき防止 */
-    font-size: clamp(22px, 6.2vw, 28px);
+    min-height: 1.6em;
+    font-size: clamp(18px, 5.5vw, 28px);
     transition: color .15s ease, transform .15s ease;
+    word-break: keep-all;
   }
   .timeMeter.warn{
-    color:#c62828;
+    color: #c62828;
     animation: tmPulse .9s ease-in-out infinite;
   }
   @keyframes tmPulse{
-    0%{   transform: scale(1); }
-    50%{  transform: scale(1.06); }
+    0%{ transform: scale(1); }
+    50%{ transform: scale(1.06); }
     100%{ transform: scale(1); }
   }
 
-  /* 結果表示スロット（固定してレイアウトの揺れを防止） */
+  /* 結果表示スロット */
   .resultSlot{
     min-height: clamp(36px, 5.4vw, 64px);
-    display:flex; align-items:center; justify-content:center;
-    margin:.6rem 0 .2rem; padding:4px 8px;
+    display: flex; 
+    align-items: center; 
+    justify-content: center;
+    margin: 0.6rem 0 0.2rem; 
+    padding: 4px 8px;
   }
   #result{
-    margin:0;
-    font-weight:800;
-    font-size: clamp(16px, 4.2vw, 18px);
+    margin: 0;
+    font-weight: 800;
+    font-size: clamp(14px, 3.8vw, 18px);
+    word-break: break-word;
+    max-width: 100%;
   }
-  #result:empty::before{ content:" "; white-space:pre; }
-  #result.ok{ color:#0a7d3a; }  /* 正解色 */
-  #result.ng{ color:#b7152b; }  /* 不正解色 */
+  #result:empty::before{ content: " "; white-space: pre; }
+  #result.ok{ color: #0a7d3a; }
+  #result.ng{ color: #b7152b; }
 
-  /* サイズ ⏪/⏩ ボタン */
-  .sizeControls{ display:inline-flex; gap:.4rem; align-items:center; margin-right:1rem; }
-  .sizeControls .nudge{
-    border:1px solid #bbb; border-radius:8px; padding:.25rem .6rem; background:#fff; cursor:pointer;
-    font-weight:800;
+  /* サイズ調整ボタン */
+  .sizeControls{ 
+    display: inline-flex; 
+    gap: 0.4rem; 
+    align-items: center;
+    white-space: nowrap;
   }
-  .sizeControls .nudge:hover{ background:#f5f5f5; }
-  #sizeLabel{ display:inline-block; min-width:64px; text-align:center; font-variant-numeric:tabular-nums; font-weight:800; }
+  .sizeControls .nudge{
+    border: 1px solid #bbb; 
+    border-radius: 8px; 
+    padding: 0.25rem 0.6rem; 
+    background: #fff; 
+    cursor: pointer;
+    font-weight: 800;
+    font-size: clamp(14px, 3.5vw, 16px);
+  }
+  .sizeControls .nudge:hover{ background: #f5f5f5; }
+  .sizeControls .nudge:active{ background: #e8e8e8; }
+  #sizeLabel{ 
+    display: inline-block; 
+    min-width: 50px; 
+    text-align: center; 
+    font-variant-numeric: tabular-nums; 
+    font-weight: 800; 
+  }
+
+  /* モバイル最適化 */
+  @media (max-width: 480px) {
+    body{ padding: 8px; }
+    .titleRow{ gap: 8px; margin: 0.2em 0 0.4em; }
+    .board{ padding: 8px; gap: 3px; }
+    .choices{ gap: 6px; }
+    .btnRow{ gap: 8px; }
+    button{ padding: 8px 12px; }
+    .controls{ 
+      flex-direction: column; 
+      gap: 8px;
+    }
+    .sizeControls{
+      width: 100%;
+      justify-content: center;
+    }
+  }
+
+  /* 極小デバイス対応 */
+  @media (max-width: 360px) {
+    h2{ font-size: 14px; }
+    .switch{ font-size: 11px; gap: 6px; }
+    .slider{ width: 40px; height: 22px; }
+    .slider::after{ width: 18px; height: 18px; }
+    .switch input:checked + .slider::after{ left: 20px; }
+    button{ font-size: 12px; padding: 7px 10px; }
+  }
 </style>
 </head>
 <body>
@@ -136,21 +291,21 @@
     <span id="timer" class="timer" aria-live="polite"></span>
   </div>
 
-  <!-- 残り時間メーター（■/□表示） -->
+  <!-- 残り時間メーター -->
   <div id="timeMeter" class="timeMeter" aria-live="polite" aria-label="残り時間"></div>
 
-  <!-- 結果（固定スロット内） -->
+  <!-- 結果 -->
   <div class="resultSlot">
     <div id="result" role="status" aria-live="polite"></div>
   </div>
 
-  <!-- 連続正解 表示行 -->
+  <!-- 連続正解 -->
   <div id="streakRow">
     <span>連続正解数：<strong><span id="streakNow">0</span></strong>回 (最高 <strong><span id="streakBest">0</span></strong>回)</span>
     <button type="button" id="streakReset">正解数リセット</button>
   </div>
 
-  <!-- 各種設定（UD／サイズ） -->
+  <!-- 各種設定 -->
   <div class="controls">
     <div class="sizeControls">
       サイズ：
@@ -184,8 +339,8 @@
 
   const udToggle  = document.getElementById('udToggle');
   const speedToggle = document.getElementById('speedToggle');
-  const timerEl   = document.getElementById('timer');      // 今回は非表示にする
-  const timeMeterEl = document.getElementById('timeMeter'); // 大きな■/□バー
+  const timerEl   = document.getElementById('timer');
+  const timeMeterEl = document.getElementById('timeMeter');
 
   const streakNowEl  = document.getElementById('streakNow');
   const streakBestEl = document.getElementById('streakBest');
@@ -194,18 +349,18 @@
   const NUMS = ['一','二','三','四','五','六','七','八','九'];
 
   // ===== 状態 =====
-  let problemCounts = Array(10).fill(0); // 1..9 合計7
+  let problemCounts = Array(10).fill(0);
   let waits = new Set();
   let selected = new Set();
 
   // スピードモード
   const LS_SPEED = 'speedMode7';
   let speedMode = (localStorage.getItem(LS_SPEED) === '1');
-  const timeLimit = 10; // 固定
+  const timeLimit = 10;
   let timeLeft = 0;
   let timerId = null;
 
-  // 連続正解（別キー）
+  // 連続正解
   let streak = 0;
   let bestStreak = 0;
   const LS_STREAK = 'chinitsu7_streak_now';
@@ -325,7 +480,7 @@
     const w=new Set();
     if(sum(c7)!==7) return w;
     for(let t=1;t<=9;t++){
-      if(c7[t]===4) continue; // 山切れ
+      if(c7[t]===4) continue;
       if(agari8StdWithoutBanned(c7, t)) w.add(t);
     }
     return w;
@@ -343,7 +498,7 @@
   function randAgari8(){
     for(let t=0;t<50000;t++){
       const c=randCounts8();
-      if(isAgari8Std(c.slice())) return c; // チートイツ除外
+      if(isAgari8Std(c.slice())) return c;
     }
     return null;
   }
@@ -357,7 +512,7 @@
       return;
     }
     let idx; do{ idx=1+Math.floor(Math.random()*9); } while(agari[idx]===0);
-    agari[idx]--; // 7枚に
+    agari[idx]--;
     problemCounts=agari;
     waits=waitsFor7(problemCounts.slice());
     if(waits.size<=1) return makeProblem();
@@ -365,32 +520,30 @@
 
   // ===== メーター描画・タイマー制御 =====
   function renderMeter(sec){
-    const total = timeLimit; // 10
+    const total = timeLimit;
     const n = Math.max(0, Math.min(total, sec|0));
     const bar = '■'.repeat(n) + '□'.repeat(total - n);
     if (timeMeterEl){
-      timeMeterEl.textContent = `0${bar}10`; // 例: 0■■■■■■■■■□10
+      timeMeterEl.textContent = `0${bar}10`;
       timeMeterEl.setAttribute('aria-label', `残り ${n} 秒`);
-      // 3秒以下で赤＆軽い鼓動アニメ
       if (speedMode && n <= 3 && n > 0) timeMeterEl.classList.add('warn');
       else timeMeterEl.classList.remove('warn');
       if (n === 0) timeMeterEl.classList.remove('warn');
     }
   }
 
-  // ---- タイマーを安全に止める & 表示を消す ----
   function stopTimer(){
     if(timerId){ clearInterval(timerId); timerId = null; }
-    if (timerEl) timerEl.textContent = '';      // 数字カウントは使わない
+    if (timerEl) timerEl.textContent = '';
     if (timeMeterEl) timeMeterEl.textContent = '';
     timeMeterEl?.classList.remove('warn');
   }
 
   function startTimer(){
     if(!speedMode){ if(timerEl) timerEl.textContent=''; renderMeter(0); return; }
-    stopTimer();                    // 重複起動防止
+    stopTimer();
     timeLeft = timeLimit;
-    if (timerEl) timerEl.textContent = ''; // 数字カウントは表示しない
+    if (timerEl) timerEl.textContent = '';
     renderMeter(timeLeft);
     timerId = setInterval(()=>{
       timeLeft -= 1;
@@ -405,7 +558,7 @@
 
   // ===== 判定 =====
   function judge(){
-    stopTimer(); // 判定時は止める（多重実行防止）
+    stopTimer();
     const pick=[...selected].sort((a,b)=>a-b).join(',');
     const ans=[...waits].sort((a,b)=>a-b).join(',');
     if(pick===ans){
@@ -431,13 +584,13 @@
   // ===== 次の問題 =====
   function next(){
     selected.clear(); resultEl.className=''; resultEl.textContent=''; errEl.textContent='';
-    stopTimer();                     // 前のタイマーを確実停止（メーターも空に）
+    stopTimer();
     makeProblem(); renderHand(); renderChoices();
     if(speedMode){ btnReveal.disabled = true; startTimer(); }
-    else{ btnReveal.disabled = false; /* 表示は stopTimer() 済み */ }
+    else{ btnReveal.disabled = false; }
   }
 
-  // ===== サイズ（⏪/⏩）＆ UD =====
+  // ===== サイズ =====
   const SIZE_MIN=20, SIZE_MAX=80, SIZE_STEP=5;
   let sizePx = +(localStorage.getItem('tileSizePx') || 40);
   function clamp(v,min,max){ return v<min?min:v>max?max:v; }
@@ -458,23 +611,20 @@
   btnNext.addEventListener('click', next);
   window.addEventListener('keydown', (e)=>{ if(e.key==='Enter') judge(); if(e.key.toLowerCase()==='n') next(); });
 
-  // サイズ調整ボタン
   sizeDown.addEventListener('click', ()=> applySize(sizePx - SIZE_STEP));
   sizeUp  .addEventListener('click', ()=> applySize(sizePx + SIZE_STEP));
 
-  // UD
   udToggle.addEventListener('change', ()=>{ document.body.classList.toggle('ud', udToggle.checked); });
 
-  // スピードモード・スイッチ（ON⇄OFFで問題は維持／タイマーのみ制御）
   speedToggle.addEventListener('change', ()=>{
     speedMode = speedToggle.checked;
     try{ localStorage.setItem(LS_SPEED, speedMode ? '1' : '0'); }catch(_){}
     if (speedMode){
       btnReveal.disabled = true;
-      startTimer();   // その場でカウント開始
+      startTimer();
     }else{
       btnReveal.disabled = false;
-      stopTimer();    // その場で停止＆表示クリア
+      stopTimer();
     }
   });
 
@@ -482,10 +632,7 @@
   function init(){
     loadStreak(); renderStreak();
     document.body.classList.toggle('ud', udToggle.checked);
-
-    // 保存済みスピードモード反映
     speedToggle.checked = speedMode;
-
     applySize(sizePx);
     next();
   }
